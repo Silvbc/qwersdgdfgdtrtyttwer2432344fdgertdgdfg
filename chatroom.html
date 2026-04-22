@@ -82,7 +82,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto S
 .t3.ac{background:rgba(200,135,74,0.12);border-color:var(--amber-dim);color:var(--amber)}
 
 /* 탭 콘텐츠 */
-.tab-content{flex:1;overflow-y:auto;padding:10px 12px;min-height:0;display:none;flex-direction:column;gap:8px}
+.tab-content{flex:1;overflow-y:auto;padding:10px 12px;min-height:0;display:none;flex-direction:column;gap:8px;max-height:50%}
 .tab-content.active{display:flex}
 .tab-content::-webkit-scrollbar{width:3px}
 .tab-content::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
@@ -162,10 +162,11 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto S
 .plus-1{color:#a0c8e0}.plus-2{color:#80e080}.plus-3{color:#e0c040}.plus-4{color:#e08040}.plus-5{color:#e04040}
 .plus-max{color:#ff80ff;text-shadow:0 0 8px #ff80ff88}
 #chat-bottom{
-  flex-shrink:0;border-top:1px solid var(--border);
+  flex:1;min-height:0;border-top:1px solid var(--border);
   padding:7px 12px 8px;background:rgba(10,6,2,0.4);
+  display:flex;flex-direction:column;
 }
-.chat-log-small{height:60px;overflow-y:auto;font-size:11px;line-height:1.65;color:var(--text-dim);margin-bottom:5px}
+.chat-log-small{flex:1;min-height:0;overflow-y:auto;font-size:11px;line-height:1.65;color:var(--text-dim);margin-bottom:5px}
 .chat-log-small::-webkit-scrollbar{width:2px}
 .chat-log-small::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
 .cl .cn{font-weight:500;color:var(--text)}
@@ -211,34 +212,38 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto S
       <button class="btnb" onclick="goToDungeon()">⚔ 던전으로</button>
     </div>
 
-    <!-- 5개 탭 -->
+    <!-- 3개 탭만 -->
     <div class="tabs3">
       <button class="t3 ac" id="t3-st" onclick="swTab('st')">상태</button>
       <button class="t3" id="t3-eq" onclick="swTab('eq')">장비</button>
       <button class="t3" id="t3-iv" onclick="swTab('iv')">인벤토리</button>
-      <button class="t3" id="t3-sh" onclick="swTab('sh')">🛒상점</button>
-      <button class="t3" id="t3-fg" onclick="swTab('fg')">🔨강화</button>
     </div>
 
-    <!-- 상태 탭 -->
+    <!-- 탭 콘텐츠 (절반) -->
     <div class="tab-content active" id="tc-st"></div>
-    <!-- 장비 탭 -->
     <div class="tab-content" id="tc-eq"></div>
-    <!-- 인벤토리 탭 -->
     <div class="tab-content" id="tc-iv"></div>
-    <!-- 상점 탭 -->
-    <div class="tab-content" id="tc-sh"></div>
-    <!-- 강화 탭 -->
-    <div class="tab-content" id="tc-fg"></div>
 
-    <!-- 하단 고정 채팅 -->
+    <!-- 하단 채팅 (절반) -->
     <div id="chat-bottom">
+      <div style="font-size:10px;color:var(--text-mute);padding:4px 2px 3px;letter-spacing:1px;border-bottom:1px solid var(--border);margin-bottom:4px">💬 대화</div>
       <div class="chat-log-small" id="chat-log"></div>
       <div class="chat-input-row">
         <input id="ci" type="text" placeholder="대화..." maxlength="50" onkeydown="if(event.key==='Enter')sendChat()"/>
-        <button onclick="sendChat()">말하기</button>
+        <button onclick="sendChat()">전송</button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- 중앙 모달 (상점/강화) -->
+<div id="inn-modal" style="display:none;position:fixed;inset:0;z-index:500;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);backdrop-filter:blur(3px)">
+  <div style="background:linear-gradient(160deg,#1e1208,#150e06);border:2px solid var(--amber-dim);border-radius:12px;width:420px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,0.8)">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);flex-shrink:0">
+      <span id="modal-title" style="font-family:'Cinzel',serif;font-size:14px;color:var(--gold)"></span>
+      <button onclick="closeModal()" style="background:transparent;border:1px solid var(--border2);border-radius:6px;color:var(--text-dim);width:28px;height:28px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">✕</button>
+    </div>
+    <div id="modal-body" style="flex:1;overflow-y:auto;padding:14px 18px"></div>
   </div>
 </div>
 
@@ -365,10 +370,11 @@ const FINGER_GOLD="url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000
 
 function setCur(type){canvas.style.cursor=type==='gold'?FINGER_GOLD:FINGER;}
 
-// 상인/대장장이 NPC 위치 (맵 좌표)
+// 상인/대장장이/치료사 NPC 위치 (맵 좌표)
 const MERCHANT_X=PW*0.60, MERCHANT_Y=PH*0.44;
 const BLACKSMITH_X=PW*0.70, BLACKSMITH_Y=PH*0.44;
-const NPC_RADIUS=40; // 클릭 감지 반경
+const HEALER_X=PW*0.25,    HEALER_Y=PH*0.65;  // 치료사 - 왼쪽 벽난로 근처
+const NPC_RADIUS=40;
 
 // 마우스 위치에 따라 커서 변경
 canvas.addEventListener('mousemove',e=>{
@@ -376,12 +382,10 @@ canvas.addEventListener('mousemove',e=>{
   const r=canvas.getBoundingClientRect();
   const cx=e.clientX-r.left,cy=e.clientY-r.top;
   const px=(cx/canvas.width)*PW,py=(cy/canvas.height)*PH;
-  // 출구 근처
   if(Math.abs(px-EXIT_X)<35&&Math.abs(py-EXIT_Y)<45){setCur('gold');return;}
-  // 상인 NPC 근처
   if(Math.abs(px-MERCHANT_X)<NPC_RADIUS&&Math.abs(py-MERCHANT_Y)<NPC_RADIUS){setCur('gold');return;}
-  // 대장장이 NPC 근처
   if(Math.abs(px-BLACKSMITH_X)<NPC_RADIUS&&Math.abs(py-BLACKSMITH_Y)<NPC_RADIUS){setCur('gold');return;}
+  if(Math.abs(px-HEALER_X)<NPC_RADIUS&&Math.abs(py-HEALER_Y)<NPC_RADIUS){setCur('gold');return;}
   setCur('default');
 });
 canvas.addEventListener('mouseleave',()=>setCur('default'));
@@ -441,6 +445,40 @@ function draw(){
   [[W*0.17,H*0.58],[W*0.41,H*0.62],[W*0.17,H*0.80],[W*0.41,H*0.81]].forEach(([tx,ty])=>{const tw=W*0.135,th=H*0.07;ctx.fillStyle='rgba(0,0,0,0.3)';ctx.fillRect(tx-tw/2+4,ty+th/2+3,tw,7);ctx.fillStyle='#5a3a18';ctx.fillRect(tx-tw/2,ty-th/2,tw,th);ctx.fillStyle='#7a5028';ctx.fillRect(tx-tw/2,ty-th/2,tw,th*0.28);ctx.strokeStyle='#3a2010';ctx.lineWidth=1.5;ctx.strokeRect(tx-tw/2,ty-th/2,tw,th);ctx.fillStyle='rgba(200,168,74,0.75)';ctx.beginPath();ctx.arc(tx+tw*0.14,ty,tw*0.06,0,Math.PI*2);ctx.fill();});
   // 러그
   ctx.fillStyle='rgba(110,35,18,0.2)';ctx.beginPath();ctx.ellipse(W*0.37,H*0.71,W*0.2,H*0.1,0,0,Math.PI*2);ctx.fill();
+
+  // ── 치료사 NPC (벽난로 옆) ────────────────────────
+  {
+    const hX=W*0.25,hY=H*0.65;
+    // 치유 광원 (보라/초록빛)
+    const hfl=0.6+Math.sin(torchT*2.2)*0.4;
+    const hg=ctx.createRadialGradient(hX,hY,5,hX,hY,80);
+    hg.addColorStop(0,`rgba(160,100,255,${0.2*hfl})`);hg.addColorStop(1,'transparent');
+    ctx.fillStyle=hg;ctx.fillRect(hX-80,hY-80,160,160);
+    // 마법 파티클 (주변 원형)
+    for(let i=0;i<5;i++){const angle=torchT*2+i*(Math.PI*2/5);const px=hX+Math.cos(angle)*22,py=hY+Math.sin(angle)*18;ctx.fillStyle=`rgba(${i%2?'160,80,255':'80,220,160'},${0.7*hfl})`;ctx.beginPath();ctx.arc(px,py,2.5,0,Math.PI*2);ctx.fill();}
+    // 로브 (초록/보라)
+    ctx.fillStyle='#3a1a6a';ctx.fillRect(hX-13,hY-30,26,32);
+    ctx.fillStyle='#5a2a9a';ctx.fillRect(hX-11,hY-28,22,5);
+    // 머리카락 (긴 금발)
+    ctx.fillStyle='#e8c840';ctx.fillRect(hX-10,hY-56,20,28);
+    ctx.fillRect(hX-12,hY-44,5,16);ctx.fillRect(hX+7,hY-44,5,16);
+    // 머리
+    ctx.fillStyle='#f0c090';ctx.beginPath();ctx.arc(hX,hY-46,12,0,Math.PI*2);ctx.fill();
+    // 눈 (초록빛)
+    ctx.fillStyle='#1a2a10';ctx.fillRect(hX-5,hY-49,3,3);ctx.fillRect(hX+2,hY-49,3,3);
+    ctx.fillStyle='rgba(80,220,80,0.8)';ctx.beginPath();ctx.arc(hX-3.5,hY-48,1.5,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(hX+3.5,hY-48,1.5,0,Math.PI*2);ctx.fill();
+    // 지팡이
+    ctx.fillStyle='#5a3a10';ctx.fillRect(hX+14,hY-60,4,50);
+    ctx.fillStyle=`rgba(160,100,255,${hfl})`;ctx.beginPath();ctx.arc(hX+16,hY-62,7,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.8)';ctx.beginPath();ctx.arc(hX+16,hY-64,3,0,Math.PI*2);ctx.fill();
+    // 말풍선
+    ctx.save();ctx.fillStyle='rgba(10,5,20,0.88)';
+    ctx.beginPath();if(ctx.roundRect)ctx.roundRect(hX-42,hY-90,84,20,5);else ctx.rect(hX-42,hY-90,84,20);
+    ctx.fill();ctx.strokeStyle='#8040c0';ctx.lineWidth=1;
+    ctx.beginPath();if(ctx.roundRect)ctx.roundRect(hX-42,hY-90,84,20,5);else ctx.rect(hX-42,hY-90,84,20);
+    ctx.stroke();ctx.fillStyle='#c080ff';ctx.font='10px Noto Sans KR,sans-serif';ctx.textAlign='center';
+    ctx.fillText('✨ 치료사 엘리나',hX,hY-75);ctx.restore();
+  }
 
   // ── 상인 NPC (바 카운터 뒤) — 카운터보다 먼저 그려야 뒤에 보임
   const mX=W*0.60,mY=H*0.44;
@@ -618,16 +656,22 @@ canvas.addEventListener('click',e=>{
   const cx=e.clientX-r.left,cy=e.clientY-r.top;
   const px=(cx/canvas.width)*PW,py=(cy/canvas.height)*PH;
 
-  // 상인 NPC 클릭 → 상점 탭 열기
+  // 상인 NPC 클릭 → 상점 모달 열기
   if(Math.abs(px-MERCHANT_X)<NPC_RADIUS&&Math.abs(py-MERCHANT_Y)<NPC_RADIUS){
-    swTab('sh');
+    openModal('sh');
     addChatLine('sys','🛒 상인 가르시아: 어서오세요! 무엇을 찾으시나요?');
     return;
   }
-  // 대장장이 NPC 클릭 → 강화 탭 열기
+  // 대장장이 NPC 클릭 → 강화 모달 열기
   if(Math.abs(px-BLACKSMITH_X)<NPC_RADIUS&&Math.abs(py-BLACKSMITH_Y)<NPC_RADIUS){
-    swTab('fg');
+    openModal('fg');
     addChatLine('sys','🔨 대장장이 보르그: 강화해드리지! 금화만 있으면 돼!');
+    return;
+  }
+  // 치료사 NPC 클릭 → 치료사 모달 열기
+  if(Math.abs(px-HEALER_X)<NPC_RADIUS&&Math.abs(py-HEALER_Y)<NPC_RADIUS){
+    openModal('healer');
+    addChatLine('sys','✨ 치료사 엘리나: 어서오세요. 제가 도움을 드릴게요.');
     return;
   }
 
@@ -687,15 +731,30 @@ function startRegen(){
 function swTab(name){
   activeTab=name;
   document.querySelectorAll('.t3').forEach(t=>t.classList.remove('ac'));
-  document.getElementById('t3-'+name).classList.add('ac');
+  const tb=document.getElementById('t3-'+name);if(tb)tb.classList.add('ac');
   document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
-  document.getElementById('tc-'+name).classList.add('active');
+  const tc=document.getElementById('tc-'+name);if(tc)tc.classList.add('active');
   if(name==='st')renderSt();
   else if(name==='eq')renderEq();
   else if(name==='iv')renderIv();
-  else if(name==='sh')renderSh();
-  else if(name==='fg')renderFg();
 }
+
+// ── 모달 (상점/강화) ─────────────────────────────
+function openModal(type){
+  const modal=document.getElementById('inn-modal');
+  const title=document.getElementById('modal-title');
+  const body=document.getElementById('modal-body');
+  const titles={sh:'🛒 상인 가르시아 - 상점', fg:'🔨 대장장이 보르그 - 강화', healer:'✨ 치료사 엘리나'};
+  title.textContent=titles[type]||'';
+  if(type==='sh')body.innerHTML=buildShopHTML();
+  else if(type==='fg')body.innerHTML=buildForgeHTML();
+  else if(type==='healer')body.innerHTML=buildHealerHTML();
+  modal.style.display='flex';
+  modal._type=type;
+}
+function closeModal(){document.getElementById('inn-modal').style.display='none';}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+document.getElementById('inn-modal')?.addEventListener('click',e=>{if(e.target===document.getElementById('inn-modal'))closeModal();});
 
 function renderSt(){
   const mh=maxHp(),p=Math.max(0,(me.hp/mh)*100);
@@ -828,19 +887,85 @@ function innUseItem(idx){
 }
 
 // ── 상점 ──────────────────────────────────────────
-function renderSh(){
-  const el=document.getElementById('tc-sh');if(!el)return;
-  const gold=me.gold||0;
-  let h=`
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border)">
-      <div style="font-size:12px;font-weight:500">🧙 상인 가르시아</div>
-      <div class="gold-display">💰 ${gold}G</div>
+// ── 치료사 모달 ───────────────────────────────────
+function buildHealerHTML(){
+  const inv=me.inventory||[];
+  const bigPotionCount=inv.filter(it=>it.name==='큰 물약').length;
+  const canExchange=bigPotionCount>=5;
+  const elixirCount=inv.filter(it=>it.name==='엘릭서').length;
+  return `
+    <div style="text-align:center;padding:12px 0 18px">
+      <div style="font-size:40px;margin-bottom:8px">🧝‍♀️</div>
+      <div style="font-size:13px;color:var(--text);margin-bottom:6px;font-weight:500">치료사 엘리나</div>
+      <div style="font-size:11px;color:var(--text-dim);line-height:1.7;margin-bottom:16px">
+        "큰 물약 5개를 모아오면<br>더 강력한 <span style="color:#a060ff">엘릭서</span>로 만들어 드릴게요."
+      </div>
     </div>
-    <div class="shop-tabs">
-      <button class="st2${shopMode==='buy'?' ac':''}" onclick="setShopMode('buy')">🛒 구매</button>
-      <button class="st2${shopMode==='sell'?' ac':''}" onclick="setShopMode('sell')">💰 판매</button>
-    </div>`;
 
+    <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px">
+      <div style="font-size:11px;color:var(--text-mute);margin-bottom:10px;letter-spacing:.5px">교환 레시피</div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:10px">
+        <div style="text-align:center">
+          <div style="font-size:28px">⚗️</div>
+          <div style="font-size:10px;color:var(--text-dim)">큰 물약 × 5</div>
+          <div style="font-size:10px;color:${canExchange?'#4a9e6a':'#c84a4a'};margin-top:2px">보유: ${bigPotionCount}개</div>
+        </div>
+        <div style="font-size:20px;color:var(--amber)">→</div>
+        <div style="text-align:center">
+          <div style="font-size:28px">💎</div>
+          <div style="font-size:10px;color:var(--text-dim)">엘릭서 × 1</div>
+          <div style="font-size:10px;color:var(--text-mute);margin-top:2px">보유: ${elixirCount}개</div>
+        </div>
+      </div>
+      <div style="font-size:10px;color:var(--text-mute);text-align:center;margin-bottom:10px">
+        💎 엘릭서: HP 전체 회복
+      </div>
+      <button onclick="exchangePotion()"
+        style="width:100%;padding:10px;background:${canExchange?'linear-gradient(135deg,rgba(160,96,255,0.25),rgba(100,40,200,0.2))':'rgba(40,40,40,0.3)'};
+          border:1px solid ${canExchange?'#8040c0':'var(--border)'};border-radius:8px;
+          color:${canExchange?'#c080ff':'var(--text-mute)'};font-size:13px;font-weight:500;
+          cursor:${canExchange?'pointer':'not-allowed'};font-family:'Noto Sans KR',sans-serif;
+          transition:all .15s">
+        ${canExchange?'✨ 엘릭서로 교환하기':'큰 물약이 부족합니다 ('+bigPotionCount+'/5)'}
+      </button>
+    </div>
+
+    <div style="font-size:10px;color:var(--text-mute);text-align:center;line-height:1.7">
+      교환은 여러 번 할 수 있어요.<br>큰 물약 5개 = 엘릭서 1개
+    </div>`;
+}
+
+function exchangePotion(){
+  const inv=me.inventory||[];
+  const bigPotions=inv.filter(it=>it.name==='큰 물약');
+  if(bigPotions.length<5){
+    addChatLine('sys','⚗️ 큰 물약이 5개 필요합니다!');return;
+  }
+  // 큰 물약 5개 제거
+  let removed=0;
+  for(let i=inv.length-1;i>=0&&removed<5;i--){
+    if(inv[i].name==='큰 물약'){inv.splice(i,1);removed++;}
+  }
+  // 엘릭서 추가
+  if(inv.length>=20){addChatLine('sys','인벤토리가 가득 찼습니다!');return;}
+  inv.push({name:'엘릭서',id:Date.now()});
+  me.inventory=inv;
+  saveProfile();
+  // 모달 갱신
+  document.getElementById('modal-body').innerHTML=buildHealerHTML();
+  if(activeTab==='iv')renderIv();
+  addChatLine('heal','✨ 치료사 엘리나: 완성됐어요! 💎 엘릭서 1개 획득!');
+}
+
+function buildShopHTML(){
+  const gold=me.gold||0;
+  let h=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border)">
+    <div class="gold-display">💰 ${gold}G</div>
+  </div>
+  <div class="shop-tabs">
+    <button class="st2${shopMode==='buy'?' ac':''}" onclick="setShopMode('buy')">🛒 구매</button>
+    <button class="st2${shopMode==='sell'?' ac':''}" onclick="setShopMode('sell')">💰 판매</button>
+  </div>`;
   if(shopMode==='buy'){
     h+=`<div style="font-size:10px;color:var(--text-mute);margin-bottom:8px">상인의 재고</div>`;
     SHOP_ITEMS.forEach((s,i)=>{
@@ -849,11 +974,7 @@ function renderSh(){
       const canBuy=gold>=s.price;
       h+=`<div class="shop-item">
         <div class="shop-icon">${it.icon}</div>
-        <div class="shop-info">
-          <div class="shop-name">${s.name}</div>
-          <div class="shop-stat">${stat}</div>
-          <div class="shop-desc">${it.desc}</div>
-        </div>
+        <div class="shop-info"><div class="shop-name">${s.name}</div><div class="shop-stat">${stat}</div><div class="shop-desc">${it.desc}</div></div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
           <div class="shop-price">💰${s.price}G</div>
           <button class="shop-btn" onclick="buyItem(${i})" ${canBuy?'':'disabled'}>구매</button>
@@ -862,20 +983,16 @@ function renderSh(){
     });
   } else {
     const inv=me.inventory||[];
-    if(inv.length===0){
-      h+=`<div style="text-align:center;padding:2rem;color:var(--text-mute);font-size:12px">판매할 아이템이 없습니다</div>`;
-    } else {
+    if(!inv.length){h+=`<div style="text-align:center;padding:2rem;color:var(--text-mute);font-size:12px">판매할 아이템이 없습니다</div>`;}
+    else{
       h+=`<div style="font-size:10px;color:var(--text-mute);margin-bottom:8px">인벤토리 아이템을 판매하세요</div>`;
       inv.forEach((item,idx)=>{
-        const it=ITEMS[item.name]||{icon:'📦',desc:''};
+        const bn=item.name.replace(/ \+\d+$/,'');const it=ITEMS[bn]||{icon:'📦',desc:''};
         const sp=getSellPrice(item.name);
         const stat=it.atk?`⚔️+${it.atk}`:it.def?`🛡️+${it.def}`:it.hp?`💊+${it.hp>=9999?'전체':it.hp}`:'';
         h+=`<div class="sell-item">
           <div style="font-size:18px">${it.icon}</div>
-          <div style="flex:1;min-width:0">
-            <div style="font-size:12px;font-weight:500;color:var(--text)">${item.name}</div>
-            <div style="font-size:10px;color:var(--green)">${stat}</div>
-          </div>
+          <div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:500;color:var(--text)">${item.name}</div><div style="font-size:10px;color:var(--green)">${stat}</div></div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
             <div style="font-size:11px;color:var(--amber)">💰${sp}G</div>
             <button class="sell-btn" onclick="sellItem(${idx})">판매</button>
@@ -884,42 +1001,31 @@ function renderSh(){
       });
     }
   }
-  el.innerHTML=h;
+  return h;
 }
+function renderSh(){const b=document.getElementById('modal-body');if(b&&document.getElementById('inn-modal').style.display==='flex')b.innerHTML=buildShopHTML();}
 
-function setShopMode(mode){
-  shopMode=mode;
-  renderSh();
-}
+function setShopMode(mode){shopMode=mode;document.getElementById('modal-body').innerHTML=buildShopHTML();}
 
 function buyItem(shopIdx){
   const s=SHOP_ITEMS[shopIdx];if(!s)return;
   const inv=me.inventory||[];
-  if(inv.length>=20){
-    addChatLine('sys','⚠️ 인벤토리가 가득 찼습니다! 아이템을 판매하세요.');
-    return;
-  }
-  if((me.gold||0)<s.price){
-    addChatLine('sys','💰 금화가 부족합니다!');
-    return;
-  }
+  if(inv.length>=20){addChatLine('sys','⚠️ 인벤토리가 가득 찼습니다!');return;}
+  if((me.gold||0)<s.price){addChatLine('sys','💰 금화가 부족합니다!');return;}
   me.gold=(me.gold||0)-s.price;
-  inv.push({name:s.name,id:Date.now()});
-  me.inventory=inv;
+  inv.push({name:s.name,id:Date.now()});me.inventory=inv;
   saveProfile();
-  renderSh();
-  addChatLine('loot',`🛒 ${ITEMS[s.name]?.icon||''} ${s.name} 구매! (-${s.price}G) 잔액: ${me.gold}G`);
+  document.getElementById('modal-body').innerHTML=buildShopHTML();
+  addChatLine('loot',`🛒 ${ITEMS[s.name]?.icon||''} ${s.name} 구매! (-${s.price}G)`);
 }
 
 function sellItem(invIdx){
   const inv=me.inventory||[];const item=inv[invIdx];if(!item)return;
   const sp=getSellPrice(item.name);
-  me.gold=(me.gold||0)+sp;
-  inv.splice(invIdx,1);
-  me.inventory=inv;
+  me.gold=(me.gold||0)+sp;inv.splice(invIdx,1);me.inventory=inv;
   saveProfile();
-  renderSh();
-  addChatLine('loot',`💰 ${item.name} 판매! (+${sp}G) 잔액: ${me.gold}G`);
+  document.getElementById('modal-body').innerHTML=buildShopHTML();
+  addChatLine('loot',`💰 ${item.name} 판매! (+${sp}G)`);
 }
 
 // ── 강화 시스템 ───────────────────────────────────
@@ -966,41 +1072,26 @@ function plusColor(level){
   return '';
 }
 
-function renderFg(){
-  const el=document.getElementById('tc-fg');if(!el)return;
+function buildForgeHTML(){
   const gold=me.gold||0;
   const items=getForgeableItems();
-
-  let h=`
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border)">
-      <div style="font-size:12px;font-weight:500">🔨 대장장이 보르그</div>
-      <div class="gold-display">💰 ${gold}G</div>
-    </div>
-    <div style="font-size:10px;color:var(--text-mute);margin-bottom:10px;line-height:1.7">
-      강화 실패 시 아이템은 유지되며<br>강화 수치만 1 감소합니다
-    </div>`;
-
-  if(items.length===0){
-    h+=`<div style="text-align:center;padding:2rem;color:var(--text-mute);font-size:12px">
-      강화 가능한 무기/방어구가 없습니다<br>
-      <span style="font-size:10px">인벤토리나 장비창의 무기·갑옷을 강화할 수 있어요</span>
-    </div>`;
+  let h=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border)">
+    <div class="gold-display">💰 ${gold}G</div>
+  </div>
+  <div style="font-size:10px;color:var(--text-mute);margin-bottom:10px;line-height:1.7">강화 실패 시 강화 수치만 1 감소합니다</div>`;
+  if(!items.length){
+    h+=`<div style="text-align:center;padding:2rem;color:var(--text-mute);font-size:12px">강화 가능한 무기/방어구가 없습니다</div>`;
   } else {
     items.forEach((entry,i)=>{
       const def=ITEMS[entry.baseName]||{};
       const fd=FORGE_DATA[entry.level]||FORGE_DATA[FORGE_DATA.length-1];
       const canAfford=gold>=fd.cost;
       const locLabel=entry.location==='equip'?'<span style="font-size:9px;background:rgba(74,126,200,0.2);color:#7ab0e0;border:1px solid #4a7ec8;border-radius:3px;padding:1px 5px;margin-left:4px">장착중</span>':'';
-      // 현재 스탯 계산
-      const baseAtk=def.atk||0, baseDef=def.def||0;
-      const curAtk=baseAtk+(entry.level*3+(entry.level>=3?(entry.level-2):0));
-      const curDef=baseDef+(entry.level*3+(entry.level>=3?(entry.level-2):0));
-      const nextAtk=curAtk+fd.statBonus, nextDef=curDef+fd.statBonus;
-      const statNow=def.atk?`공격력 ${curAtk}`:def.def?`방어력 ${curDef}`:'';
-      const statNext=def.atk?`→ ${nextAtk}`:def.def?`→ ${nextDef}`:'';
-      const plusCls=plusColor(entry.level);
-      const nextPlusCls=plusColor(entry.level+1);
-
+      const bonus=forgeBonus(entry.item.name);
+      const curStat=def.atk?`공격 ${def.atk+bonus}`:def.def?`방어 ${def.def+bonus}`:'';
+      const nextBonus=bonus+(fd.statBonus||3);
+      const nextStat=def.atk?`→ ${def.atk+nextBonus}`:def.def?`→ ${def.def+nextBonus}`:'';
+      const plusCls=plusColor(entry.level);const nextPlusCls=plusColor(entry.level+1);
       h+=`<div class="forge-item">
         <div class="forge-header">
           <div class="forge-icon">${def.icon||'📦'}</div>
@@ -1010,79 +1101,49 @@ function renderFg(){
               ${entry.level>0?`<span class="forge-plus ${plusCls}">+${entry.level}</span>`:''}
               ${locLabel}
             </div>
-            <div class="forge-stats">${statNow} <span style="color:var(--green)">${statNext}</span></div>
+            <div class="forge-stats">${curStat} <span style="color:var(--green)">${nextStat}</span></div>
           </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:10px;margin-bottom:8px">
-          <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:4px;padding:5px;text-align:center">
-            <div style="color:var(--text-mute)">비용</div>
-            <div style="color:var(--amber);font-weight:500">${fd.cost}G</div>
-          </div>
-          <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:4px;padding:5px;text-align:center">
-            <div style="color:var(--text-mute)">성공률</div>
-            <div style="color:${fd.rate>=70?'#4a9e6a':fd.rate>=40?'#c8874a':'#c84a4a'};font-weight:500">${fd.rate}%</div>
-          </div>
-          <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:4px;padding:5px;text-align:center">
-            <div style="color:var(--text-mute)">목표</div>
-            <div class="forge-plus ${nextPlusCls}" style="font-weight:700">+${entry.level+1}</div>
-          </div>
+          <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:4px;padding:5px;text-align:center"><div style="color:var(--text-mute)">비용</div><div style="color:var(--amber);font-weight:500">${fd.cost}G</div></div>
+          <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:4px;padding:5px;text-align:center"><div style="color:var(--text-mute)">성공률</div><div style="color:${fd.rate>=70?'#4a9e6a':fd.rate>=40?'#c8874a':'#c84a4a'};font-weight:500">${fd.rate}%</div></div>
+          <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:4px;padding:5px;text-align:center"><div style="color:var(--text-mute)">목표</div><div class="forge-plus ${nextPlusCls}" style="font-weight:700">+${entry.level+1}</div></div>
         </div>
         <button class="forge-btn" onclick="forgeItem(${i})" ${canAfford?'':'disabled'}>
-          ${canAfford?`🔨 강화 (+${entry.level}→+${entry.level+1})`:'💰 금화 부족'}
+          ${canAfford?`🔨 강화 +${entry.level} → +${entry.level+1}`:'💰 금화 부족'}
         </button>
       </div>`;
     });
   }
-  el.innerHTML=h;
+  return h;
 }
+function renderFg(){const b=document.getElementById('modal-body');if(b&&document.getElementById('inn-modal').style.display==='flex')b.innerHTML=buildForgeHTML();}
 
 function forgeItem(entryIdx){
   const items=getForgeableItems();
   const entry=items[entryIdx];if(!entry)return;
   const fd=FORGE_DATA[entry.level];if(!fd)return;
   if((me.gold||0)<fd.cost){addChatLine('sys','💰 금화가 부족합니다!');return;}
-
   me.gold=(me.gold||0)-fd.cost;
   const success=Math.random()*100<fd.rate;
-  const def=ITEMS[entry.baseName]||{};
-  const icon=def.icon||'📦';
-
+  const def=ITEMS[entry.baseName]||{};const icon=def.icon||'📦';
   if(success){
-    const newLevel=entry.level+1;
-    const newName=makeItemName(entry.baseName,newLevel);
-    const plusCls=plusColor(newLevel);
-    if(entry.location==='inv'){
-      const inv=me.inventory||[];
-      if(inv[entry.idx])inv[entry.idx].name=newName;
-      me.inventory=inv;
-    } else {
-      const eq=me.equipped||{};
-      eq[entry.slot]=newName;me.equipped=eq;
-    }
-    saveProfile();renderFg();
-    if(activeTab==='eq')renderEq();
-    if(activeTab==='iv')renderIv();
-    addChatLine('loot',`✨ ${icon}${entry.baseName} 강화 성공! +${entry.level} → +${newLevel} (-${fd.cost}G)`);
-    // 최대 강화 달성
-    if(newLevel>=MAX_FORGE){
-      addChatLine('loot',`🏆 ${entry.baseName} 최대 강화 +${MAX_FORGE} 달성!`);
-    }
+    const newLevel=entry.level+1;const newName=makeItemName(entry.baseName,newLevel);
+    if(entry.location==='inv'){const inv=me.inventory||[];if(inv[entry.idx])inv[entry.idx].name=newName;me.inventory=inv;}
+    else{const eq=me.equipped||{};eq[entry.slot]=newName;me.equipped=eq;}
+    saveProfile();
+    document.getElementById('modal-body').innerHTML=buildForgeHTML();
+    if(activeTab==='eq')renderEq();if(activeTab==='iv')renderIv();
+    addChatLine('loot',`✨ 강화 성공! ${entry.baseName} +${entry.level} → +${newLevel} (-${fd.cost}G)`);
+    if(newLevel>=MAX_FORGE)addChatLine('loot',`🏆 최대 강화 +${MAX_FORGE} 달성!`);
   } else {
-    // 실패 시 강화 수치 -1 (0 이하로 내려가지 않음)
-    const newLevel=Math.max(0,entry.level-1);
-    const newName=makeItemName(entry.baseName,newLevel);
-    if(entry.location==='inv'){
-      const inv=me.inventory||[];
-      if(inv[entry.idx])inv[entry.idx].name=newName;
-      me.inventory=inv;
-    } else {
-      const eq=me.equipped||{};
-      eq[entry.slot]=newName;me.equipped=eq;
-    }
-    saveProfile();renderFg();
-    if(activeTab==='eq')renderEq();
-    if(activeTab==='iv')renderIv();
-    addChatLine('sys',`💔 ${icon}${entry.baseName} 강화 실패... +${entry.level}→+${newLevel} (-${fd.cost}G)`);
+    const newLevel=Math.max(0,entry.level-1);const newName=makeItemName(entry.baseName,newLevel);
+    if(entry.location==='inv'){const inv=me.inventory||[];if(inv[entry.idx])inv[entry.idx].name=newName;me.inventory=inv;}
+    else{const eq=me.equipped||{};eq[entry.slot]=newName;me.equipped=eq;}
+    saveProfile();
+    document.getElementById('modal-body').innerHTML=buildForgeHTML();
+    if(activeTab==='eq')renderEq();if(activeTab==='iv')renderIv();
+    addChatLine('sys',`💔 강화 실패... +${entry.level}→+${newLevel} (-${fd.cost}G)`);
   }
   if(activeTab==='st')renderSt();
 }
