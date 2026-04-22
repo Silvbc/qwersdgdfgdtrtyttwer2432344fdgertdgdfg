@@ -1315,6 +1315,33 @@ function villageForge(entryIdx,bless=false){
   saveProfile();document.getElementById('vmodal-body').innerHTML=buildVillageForgeHTML();renderCurTab();
 }
 // 마을 대장간 제작
+function buildVillageCraftHTML(){
+  let h=`<div style="font-size:11px;color:var(--text-dim);margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border)">⚒️ 재료로 아이템 제작</div>`;
+  RECIPES.forEach((r,i)=>{
+    const it=ITEMS[r.result]||{};
+    const matOk=Object.entries(r.materials).every(([mat,cnt])=>countInInventory(mat)>=cnt);
+    const goldOk=(me.gold||0)>=r.gold;const ok=matOk&&goldOk;
+    const matStr=Object.entries(r.materials).map(([mat,cnt])=>{
+      const have=countInInventory(mat);
+      return`${ITEMS[mat]?.icon||''}${mat} ${have}/${cnt}`;
+    }).join(', ');
+    const statStr=it.atk?`⚔️ 공격력 +${it.atk}`:it.def?`🛡️ 방어력 +${it.def}`:it.slots?`🎒 +${it.slots}칸`:it.desc||'';
+    h+=`<div style="background:rgba(255,255,255,0.03);border:1px solid ${ok?'var(--amber-dim)':'var(--border)'};border-radius:8px;padding:10px;margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <div style="font-size:24px">${it.icon||'📦'}</div>
+        <div>
+          <div style="font-size:12px;font-weight:500;color:var(--gold)">${r.result}</div>
+          <div style="font-size:10px;color:var(--green)">${statStr}</div>
+        </div>
+      </div>
+      <div style="font-size:10px;color:${matOk?'var(--text-dim)':'#c84a4a'};margin-bottom:4px">재료: ${matStr}</div>
+      ${r.gold>0?`<div style="font-size:10px;color:${goldOk?'var(--amber)':'#c84a4a'};margin-bottom:8px">금화: ${me.gold||0}/${r.gold}G</div>`:''}
+      <button onclick="villageCraft(${i})" style="width:100%;padding:7px;background:${ok?'rgba(200,168,74,0.2)':'rgba(40,40,40,0.2)'};border:1px solid ${ok?'var(--gold-dim)':'var(--border)'};border-radius:5px;color:${ok?'var(--gold)':'var(--text-mute)'};font-size:12px;cursor:${ok?'pointer':'not-allowed'};font-family:inherit" ${ok?'':'disabled'}>⚒️ 제작</button>
+    </div>`;
+  });
+  return h;
+}
+
 function villageCraft(idx){
   const r=RECIPES[idx];if(!r)return;
   if(!Object.entries(r.materials).every(([mat,cnt])=>countInInventory(mat)>=cnt)){addLine({cls:'sy',text:'재료 부족!'});return;}
