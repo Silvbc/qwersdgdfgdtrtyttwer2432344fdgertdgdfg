@@ -398,12 +398,9 @@ function drawHotbar(){
   ctx.fillStyle='#e8e0d0';ctx.font='bold 11px Noto Sans KR,sans-serif';ctx.textAlign='center';
   ctx.fillText(`❤️ ${me.hp} / ${mh}`,barX+barW/2,barY+11);
 
-  // 단축키 줄 표시 (Tab으로 전환)
-  ctx.fillStyle='rgba(255,255,255,0.5)';ctx.font='9px Noto Sans KR,sans-serif';ctx.textAlign='right';
-  ctx.fillText(`Tab: ${hotbarRow===0?'줄2':'줄1'}으로`,barX-10,hotbarY-4);
-  // 현재 줄 번호
-  ctx.fillStyle='rgba(255,255,255,0.4)';ctx.textAlign='left';
-  ctx.fillText(`줄 ${hotbarRow+1}/2`,barX,hotbarY-4);
+  // 벨트 레이블
+  ctx.fillStyle='rgba(255,255,255,0.5)';ctx.font='bold 9px Noto Sans KR,sans-serif';ctx.textAlign='center';
+  ctx.fillText(`🎒 벨트 ${hotbarRow+1}줄/2 (Tab전환 · →제거)`,barX+barW/2,hotbarY-4);
 
   // 슬롯 그리기
   for(let i=0;i<cols;i++){
@@ -424,27 +421,42 @@ function drawHotbar(){
   }
 }
 
-// 단축키 Q,W,E,R 사용
+// 단축키 Q,W,E,R 사용 / Tab 줄전환 / 오른쪽 방향키 = 벨트에서 제거
 document.addEventListener('keydown',e=>{
   if(e.target.tagName==='INPUT')return;
   const key=e.key.toLowerCase();
-  // 단축키 사용
+  // Q/W/E/R: 벨트 사용
   const slot={'q':0,'w':1,'e':2,'r':3}[key];
   if(slot!==undefined){const item=hotbar[hotbarRow][slot];if(item)useHotbarItem(slot);return;}
   // Tab: 줄 전환
   if(key==='tab'){e.preventDefault();hotbarRow=hotbarRow===0?1:0;return;}
+  // 오른쪽 방향키: 현재 줄 전체 벨트→인벤 반환 (또는 마지막 등록 슬롯 제거)
+  if(e.key==='ArrowRight'){
+    e.preventDefault();
+    // 마지막 채워진 슬롯부터 하나씩 제거
+    for(let slot=3;slot>=0;slot--){
+      if(hotbar[hotbarRow][slot]){removeFromBelt(hotbarRow,slot);return;}
+    }
+    // 현재 줄이 비어있으면 다른 줄 확인
+    const otherRow=hotbarRow===0?1:0;
+    for(let slot=3;slot>=0;slot--){
+      if(hotbar[otherRow][slot]){removeFromBelt(otherRow,slot);return;}
+    }
+    addLine({cls:'sy',text:'벨트가 이미 비어있습니다.'});
+    return;
+  }
 });
 
 function useHotbarItem(slot){
   const itemName=hotbar[hotbarRow][slot];if(!itemName||!me)return;
-  const def=ITEMS[itemName];if(!def)return;
+  const baseName=itemName.replace(/ \+\d+$/,'');
+  const def=ITEMS[baseName];if(!def)return;
   if(def.type==='potion'){
     const mh=myMaxHp(),healed=Math.min(def.hp||0,mh-me.hp);
     if(healed<=0){addLine({cls:'sy',text:'HP가 이미 가득 찼습니다!'});return;}
     me.hp=Math.min(mh,me.hp+(def.hp||0));
-    // 인벤에서 제거
-    const idx=me.inventory.findIndex(it=>it.name===itemName);
-    if(idx>=0){me.inventory.splice(idx,1);if(!me.inventory.some(it=>it.name===itemName))hotbar[hotbarRow][slot]=null;}
+    // 벨트에서만 제거 (인벤토리와 분리된 개념)
+    hotbar[hotbarRow][slot]=null;
     const s=w2s(myPos.x,myPos.y);floatTxt('+'+healed,s.x,s.y-30,'h');
     addLine({cls:'hl',text:`🧪 ${itemName} 사용! HP +${healed}`});
     renderCurTab();saveProfile();
@@ -452,7 +464,38 @@ function useHotbarItem(slot){
 }
 
 // 인벤 아이템을 단축키 슬롯에 등록 (인벤에서 우클릭)
-function setHotbar(itemName,row,slot){hotbar[row][slot]=itemName;addLine({cls:'sy',text:`[${row+1}줄-${'QWER'[slot]}] ${itemName} 등록`});}
+// ── 벨트 (단축키 슬롯) ────────────────────────────
+// 벨트에 등록하면 인벤토리에서 제거, 벨트에서 빼면 인벤토리로 복귀
+function addToBelt(invIdx){
+  const inv=me.inventory||[];
+  const item=inv[invIdx];if(!item)return;
+  const def=ITEMS[item.name.replace(/ \+\d+$/,'')];
+  if(!def||def.type!=='potion'){addLine({cls:'sy',text:'물약만 벨트에 등록할 수 있습니다.'});return;}
+  // 빈 슬롯 찾기
+  for(let row=0;row<2;row++)for(let slot=0;slot<4;slot++){
+    if(!hotbar[row][slot]){
+      hotbar[row][slot]=item.name;
+      inv.splice(invIdx,1);
+      me.inventory=inv;
+      addLine({cls:'sy',text:`🎒 벨트 [${row+1}줄-${'QWER'[slot]}] ${item.name} 장착`});
+      renderCurTab();saveProfile();return;
+    }
+  }
+  addLine({cls:'sy',text:'벨트가 가득 찼습니다! (8칸)'});
+}
+
+function removeFromBelt(row,slot){
+  const itemName=hotbar[row][slot];if(!itemName)return;
+  const inv=me.inventory||[];
+  if(inv.length>=20){addLine({cls:'sy',text:'인벤토리가 가득 찼습니다!'});return;}
+  inv.push({name:itemName,id:Date.now()});
+  hotbar[row][slot]=null;
+  me.inventory=inv;
+  addLine({cls:'sy',text:`🎒 벨트에서 제거: ${itemName} → 인벤토리`});
+  renderCurTab();saveProfile();
+}
+
+function setHotbar(itemName,row,slot){hotbar[row][slot]=itemName;}
 
 // ── 마우스 ────────────────────────────────────────
 let mouseWX=0,mouseWY=0;
@@ -521,25 +564,29 @@ function checkPortals(){
     if(dist({x:mouseWX,y:mouseWY},{x:300+60,y:300+60})<55&&cv.onclick){}
     // 던전 입구
     const d=PORTALS.DUNGEON;
-    if(dist(myPos,{x:d.x+d.w/2,y:d.y+d.h/2})<50){portalCool=true;changeZone(ZONE.D1);setTimeout(()=>portalCool=false,1500);return;}
+    if(dist(myPos,{x:d.x+d.w/2,y:d.y+d.h/2})<50){portalCool=true;changeZone(ZONE.D1,ZONE.WORLD);setTimeout(()=>portalCool=false,1500);return;}
   } else {
     // 던전 계단
     let upX,downX;
     if(currentZone===ZONE.D1){upX=2300;downX=120;}
     else if(currentZone===ZONE.D2){upX=2300;downX=120;}
     else{upX=null;downX=120;}
-    if(upX&&dist(myPos,{x:upX,y:700})<45){portalCool=true;changeZone(currentZone===ZONE.D1?ZONE.D2:ZONE.D3);setTimeout(()=>portalCool=false,1500);return;}
-    if(dist(myPos,{x:downX,y:700})<45){portalCool=true;changeZone(currentZone===ZONE.D1?ZONE.WORLD:currentZone===ZONE.D2?ZONE.D1:ZONE.D2);setTimeout(()=>portalCool=false,1500);return;}
+    if(upX&&dist(myPos,{x:upX,y:700})<45){portalCool=true;changeZone(currentZone===ZONE.D1?ZONE.D2:ZONE.D3,currentZone);setTimeout(()=>portalCool=false,1500);return;}
+    if(dist(myPos,{x:downX,y:700})<45){portalCool=true;changeZone(currentZone===ZONE.D1?ZONE.WORLD:currentZone===ZONE.D2?ZONE.D1:ZONE.D2,currentZone);setTimeout(()=>portalCool=false,1500);return;}
   }
 }
 
-function changeZone(zone){
+function changeZone(zone,fromZone){
   currentZone=zone;
   Object.keys(monsters).forEach(id=>remMon(id));monsters={};
   Object.keys(drops).forEach(id=>remDrop(id));drops={};
   spawnMonsters();
   // 시작 위치
-  if(zone===ZONE.WORLD)myPos=safeSpawn(280,600,80);
+  if(zone===ZONE.WORLD){
+    // 던전에서 나오면 던전 입구 앞에 스폰
+    if(fromZone===ZONE.D1)myPos=safeSpawn(PORTALS.DUNGEON.x-80, PORTALS.DUNGEON.y, 60);
+    else myPos=safeSpawn(280,600,80); // 여관에서 나올 때는 마을 중심
+  }
   else if(zone===ZONE.D1)myPos=safeSpawn(200,700,80);
   else if(zone===ZONE.D2)myPos=safeSpawn(200,700,80);
   else if(zone===ZONE.D3)myPos=safeSpawn(400,700,80);
@@ -750,16 +797,16 @@ function renderEq(){
 
 function renderIv(){
   const inv=me.inventory||[];
-  let h=`<div style="font-size:11px;color:var(--text-dim);margin-bottom:8px">${inv.length}/20칸 · <span style="font-size:10px;color:var(--text-mute)">우클릭→단축키 등록</span></div><div class="ig">`;
+  let h=`<div style="font-size:11px;color:var(--text-dim);margin-bottom:8px">${inv.length}/20칸 · <span style="font-size:10px;color:var(--text-mute)">우클릭→벨트 등록</span></div><div class="ig">`;
   for(let i=0;i<20;i++){
     const item=inv[i];
     if(item){
       const bn=item.name.replace(/ \+\d+$/,''),def=ITEMS[bn]||{icon:'📦',rarity:'common'};
       const rc=def.rarity==='epic'?'repic':def.rarity==='rare'?'rrare':def.rarity==='uncommon'?'runcommon':'rcommon';
-      h+=`<div class="ic ${rc}" onclick="useItem(${i})" oncontextmenu="showHotbarMenu(event,${i})" onmouseenter="showTip(event,'${item.name}')" onmouseleave="hideTip()"><div class="ii">${def.icon}</div><div class="in">${item.name}</div></div>`;
+      h+=`<div class="ic ${rc}" onclick="useItem(${i})" oncontextmenu="addToBelt(${i});event.preventDefault()" onmouseenter="showTip(event,'${item.name}')" onmouseleave="hideTip()"><div class="ii">${def.icon}</div><div class="in">${item.name}</div></div>`;
     } else h+=`<div class="ic em2"></div>`;
   }
-  h+='</div><div style="font-size:10px;color:var(--text-mute);margin-top:8px">무기/갑옷: 장착 · 물약: 사용</div>';
+  h+='</div><div style="font-size:10px;color:var(--text-mute);margin-top:8px">무기/갑옷: 장착 · 물약: 사용 · 우클릭: 벨트 등록</div>';
   document.getElementById('pc').innerHTML=h;
 }
 
