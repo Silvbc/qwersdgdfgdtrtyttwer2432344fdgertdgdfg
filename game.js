@@ -100,6 +100,7 @@ const ITEMS={
   '큰 물약':        {icon:'⚗️',type:'potion',hp:80,  desc:'HP 80 회복',   rarity:'u'},
   '엘릭서':         {icon:'💎',type:'potion',hp:9999,desc:'HP 전체 회복',  rarity:'r'},
   '마법의 강화물약': {icon:'🌟',type:'buff',  desc:'2분간 공격+20, 이동+50%, 공격속도+50%', rarity:'e'},
+  '축복의 물':       {icon:'🫧',type:'bless', desc:'강화 시 성공률 60% 보장 (1회 사용)',      rarity:'e'},
 };
 
 // ── 가방 & 중첩 시스템 ────────────────────────────
@@ -200,6 +201,8 @@ const RECIPES=[
   // 미스릴 장비
   {result:'미스릴 검',   materials:{'미스릴 광석':3}, gold:500, desc:'미스릴 광석 3개 + 500G'},
   {result:'미스릴 갑옷', materials:{'미스릴 광석':3}, gold:500, desc:'미스릴 광석 3개 + 500G'},
+  // 축복의 물 (엘릭서 1 + 미스릴 광석 5)
+  {result:'축복의 물',   materials:{'엘릭서':1,'미스릴 광석':5}, gold:0, desc:'엘릭서 1개 + 미스릴 광석 5개'},
   // 가방 제작 (재료 조합)
   {result:'낡은 가방',   materials:{'늑대 발톱':5}, gold:100, desc:'늑대 발톱 5개 + 100G'},
   {result:'큰 가방',     materials:{'늑대 발톱':5,'해골 뼈':3}, gold:300, desc:'늑대 발톱 5개 + 해골 뼈 3개 + 300G'},
@@ -782,6 +785,9 @@ let rightHoldActive=false;
 // 우클릭 컨텍스트 메뉴 전체 차단 (캔버스 + 드랍아이템 + 몬스터 등 모두)
 document.addEventListener('contextmenu',e=>{e.preventDefault();});
 cv.addEventListener('contextmenu',e=>{e.preventDefault();});
+// 더블클릭 텍스트 선택 메뉴 차단
+document.addEventListener('selectstart',e=>{e.preventDefault();});
+document.addEventListener('mousedown',e=>{if(e.detail>1)e.preventDefault();});
 
 cv.addEventListener('mousedown',e=>{
   if(e.button!==2||!me)return;
@@ -1149,6 +1155,9 @@ function openVillageModal(type){
   }
   villageModalOpen=true;
   modal.style.display='flex';
+  // 몬스터/캐릭터 레이어 숨기기
+  const el=document.getElementById('el');
+  if(el)el.style.visibility='hidden';
   renderVillageModal(type);
 }
 
@@ -1156,6 +1165,9 @@ function closeVillageModal(){
   const m=document.getElementById('village-modal');
   if(m)m.style.display='none';
   villageModalOpen=false;
+  // 몬스터/캐릭터 레이어 다시 보이기
+  const el=document.getElementById('el');
+  if(el)el.style.visibility='visible';
 }
 
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&villageModalOpen)closeVillageModal();});
@@ -1239,81 +1251,69 @@ function buildVillageShopHTML(){
 
 function buildVillageForgeHTML(){
   const gold=me.gold||0;
+  const blessCount=countInInventory('축복의 물');
   const forgeables=[];
   (me.inventory||[]).forEach((item,idx)=>{const m=item.name.match(/^(.+?) \+(\d+)$/);const base=m?m[1]:item.name;const lv=m?parseInt(m[2]):0;const it=ITEMS[base];if(it&&(it.type==='weapon'||it.type==='armor')&&lv<10)forgeables.push({name:item.name,idx,base,lv,loc:'inv'});});
   const eq=me.equipped||{};Object.entries(eq).forEach(([slot,nm])=>{const m=nm?.match(/^(.+?) \+(\d+)$/);const base=m?m[1]:nm;const lv=m?parseInt(m[2]):0;const it=nm?ITEMS[base]:null;if(it&&lv<10)forgeables.push({name:nm,idx:slot,base,lv,loc:'equip',slot});});
-  const FORGE_DATA=[{cost:50,rate:90,stat:3},{cost:100,rate:80,stat:3},{cost:180,rate:70,stat:4},{cost:300,rate:55,stat:4},{cost:500,rate:40,stat:5},{cost:800,rate:30,stat:5},{cost:1200,rate:20,stat:6},{cost:2000,rate:15,stat:6},{cost:3000,rate:10,stat:7},{cost:5000,rate:7,stat:8}];
+  const FD=[{cost:50,rate:90,stat:3},{cost:100,rate:80,stat:3},{cost:180,rate:70,stat:4},{cost:300,rate:55,stat:4},{cost:500,rate:40,stat:5},{cost:800,rate:30,stat:5},{cost:1200,rate:20,stat:6},{cost:2000,rate:15,stat:6},{cost:3000,rate:10,stat:7},{cost:5000,rate:7,stat:8}];
   const pcol=(lv)=>lv>=10?'#ff80ff':lv>=5?'#e04040':lv>=3?'#e0c040':lv>=2?'#80e080':lv>=1?'#a0c8e0':'';
-  let h=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border)"><span style="font-size:11px;color:var(--text-dim)">인벤/장착 무기·방어구 강화</span><span style="color:var(--gold);font-size:12px">💰 ${gold}G</span></div>`;
+  let h=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border)"><span style="font-size:11px;color:var(--text-dim)">인벤/장착 무기·방어구 강화</span><span style="color:var(--gold);font-size:12px">💰 ${gold}G</span></div>
+  <div style="background:rgba(100,180,255,0.08);border:1px solid ${blessCount>0?'#6ab4ff':'var(--border)'};border-radius:8px;padding:8px 12px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between">
+    <div><div style="font-size:12px;color:${blessCount>0?'#6ab4ff':'var(--text-mute)'}">🫧 축복의 물 <b>${blessCount}개</b></div><div style="font-size:10px;color:var(--text-mute);margin-top:2px">${blessCount>0?'강화 시 성공률 60% 보장':'제작탭에서 제작 (엘릭서1+미스릴광석5)'}</div></div>
+    ${blessCount>0?'<div style="font-size:10px;color:#6ab4ff;font-weight:500">✅ 사용 가능</div>':''}
+  </div>`;
   if(!forgeables.length){h+=`<div style="text-align:center;padding:2rem;color:var(--text-mute)">강화 가능한 무기/방어구 없음</div>`;}
   else forgeables.forEach((entry,i)=>{
-    const it=ITEMS[entry.base]||{};const fd=FORGE_DATA[entry.lv]||FORGE_DATA[FORGE_DATA.length-1];const ok=(me.gold||0)>=fd.cost;
+    const it=ITEMS[entry.base]||{};const fd=FD[entry.lv]||FD[FD.length-1];const ok=(me.gold||0)>=fd.cost;
     const bonus=forgeBonus(entry.name);const curStat=it.atk?`공격 ${it.atk+bonus}`:it.def?`방어 ${it.def+bonus}`:'';
     const nextB=bonus+(fd.stat||3);const nextStat=it.atk?`→${it.atk+nextB}`:it.def?`→${it.def+nextB}`:'';
     h+=`<div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-        <div style="font-size:22px">${it.icon||'📦'}</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><div style="font-size:22px">${it.icon||'📦'}</div>
         <div style="flex:1"><div style="font-size:12px">${entry.base} ${entry.lv>0?`<span style="color:${pcol(entry.lv)}">+${entry.lv}</span>`:''} → <span style="color:${pcol(entry.lv+1)}">+${entry.lv+1}</span>${entry.loc==='equip'?' <span style="font-size:9px;color:#7ab0e0">[장착]</span>':''}</div>
-        <div style="font-size:10px;color:var(--text-mute)">${curStat} <span style="color:var(--green)">${nextStat}</span></div></div>
-      </div>
+        <div style="font-size:10px;color:var(--text-mute)">${curStat} <span style="color:var(--green)">${nextStat}</span></div></div></div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:8px;font-size:10px;text-align:center">
         <div style="background:rgba(0,0,0,.2);border-radius:4px;padding:4px"><div style="color:var(--text-mute)">비용</div><div style="color:var(--amber)">${fd.cost}G</div></div>
         <div style="background:rgba(0,0,0,.2);border-radius:4px;padding:4px"><div style="color:var(--text-mute)">성공률</div><div style="color:${fd.rate>=70?'#4a9e6a':fd.rate>=40?'#c8874a':'#c84a4a'}">${fd.rate}%</div></div>
         <div style="background:rgba(0,0,0,.2);border-radius:4px;padding:4px"><div style="color:var(--text-mute)">스탯+</div><div style="color:var(--green)">${fd.stat}</div></div>
       </div>
-      <button onclick="villageForge(${i})" style="width:100%;padding:7px;background:${ok?'rgba(200,135,74,0.2)':'rgba(40,40,40,0.2)'};border:1px solid ${ok?'var(--amber-dim)':'var(--border)'};border-radius:5px;color:${ok?'var(--amber)':'var(--text-mute)'};font-size:11px;cursor:${ok?'pointer':'not-allowed'};font-family:inherit" ${ok?'':'disabled'}>🔨 강화 +${entry.lv}→+${entry.lv+1}</button>
-    </div>`;
+      <div style="display:flex;gap:5px">
+        <button onclick="villageForge(${i},false)" style="flex:1;padding:7px;background:${ok?'rgba(200,135,74,0.2)':'rgba(40,40,40,0.2)'};border:1px solid ${ok?'var(--amber-dim)':'var(--border)'};border-radius:5px;color:${ok?'var(--amber)':'var(--text-mute)'};font-size:11px;cursor:${ok?'pointer':'not-allowed'};font-family:inherit" ${ok?'':'disabled'}>🔨 강화</button>
+        ${blessCount>0&&ok?`<button onclick="villageForge(${i},true)" style="flex:1;padding:7px;background:rgba(100,180,255,0.18);border:1px solid #4a9ecf;border-radius:5px;color:#6ab4ff;font-size:11px;cursor:pointer;font-family:inherit">✨ 축복(60%)</button>`:`<button disabled style="flex:1;padding:7px;background:rgba(40,40,40,0.2);border:1px solid var(--border);border-radius:5px;color:var(--text-mute);font-size:11px;cursor:not-allowed;font-family:inherit">🫧 축복없음</button>`}
+      </div></div>`;
   });
   return h;
 }
 
-function buildVillageCraftHTML(){
-  let h=`<div style="font-size:11px;color:var(--text-dim);margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border)">⚒️ 재료로 아이템 제작</div>`;
-  RECIPES.forEach((r,i)=>{
-    const it=ITEMS[r.result]||{};
-    const matOk=Object.entries(r.materials).every(([mat,cnt])=>countInInventory(mat)>=cnt);
-    const goldOk=(me.gold||0)>=r.gold;const ok=matOk&&goldOk;
-    const matStr=Object.entries(r.materials).map(([mat,cnt])=>{const have=countInInventory(mat);return`${ITEMS[mat]?.icon||''}${mat} ${have}/${cnt}`;}).join(', ');
-    h+=`<div style="background:rgba(255,255,255,0.03);border:1px solid ${ok?'var(--amber-dim)':'var(--border)'};border-radius:8px;padding:10px;margin-bottom:8px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><div style="font-size:24px">${it.icon||'📦'}</div><div><div style="font-size:12px;font-weight:500;color:var(--gold)">${r.result}</div><div style="font-size:10px;color:var(--green)">${it.atk?`⚔️ 공격력 +${it.atk}`:it.def?`🛡️ 방어력 +${it.def}`:it.slots?`🎒 +${it.slots}칸`:''}</div></div></div>
-      <div style="font-size:10px;color:${matOk?'var(--text-dim)':'#c84a4a'};margin-bottom:4px">재료: ${matStr}</div>
-      <div style="font-size:10px;color:${goldOk?'var(--amber)':'#c84a4a'};margin-bottom:8px">금화: ${me.gold||0}/${r.gold}G</div>
-      <button onclick="villageCraft(${i})" style="width:100%;padding:7px;background:${ok?'rgba(200,168,74,0.2)':'rgba(40,40,40,0.2)'};border:1px solid ${ok?'var(--gold-dim)':'var(--border)'};border-radius:5px;color:${ok?'var(--gold)':'var(--text-mute)'};font-size:12px;cursor:${ok?'pointer':'not-allowed'};font-family:inherit" ${ok?'':'disabled'}>⚒️ 제작</button>
-    </div>`;
-  });
-  return h;
-}
-
-// 마을 상인 구매/판매
-function villageBuy(i){const s=SHOP_LIST[i];if(!s)return;if((me.gold||0)<s.price){addLine({cls:'sy',text:'💰 금화 부족!'});return;}const ok=addToInventory(s.name,1);if(!ok){addLine({cls:'sy',text:`인벤토리 가득! (최대 ${maxInvSize()}칸)`});return;}me.gold-=s.price;saveProfile();document.getElementById('vmodal-body').innerHTML=buildVillageShopHTML();addLine({cls:'lt',text:`🛒 ${ITEMS[s.name]?.icon||''}${s.name} 구매! (-${s.price}G)`});}
-function villageSell(idx){const inv=me.inventory||[];const item=inv[idx];if(!item)return;const bn=item.name.replace(/ \+\d+$/,'');const it=ITEMS[bn]||{};const sp=Math.max(5,Math.floor((it.atk||0)*3+(it.def||0)*5+(it.hp||0)*0.3+(it.slots||0)*5));const cnt=item.count||1;me.gold=(me.gold||0)+sp*cnt;inv.splice(idx,1);me.inventory=inv;saveProfile();document.getElementById('vmodal-body').innerHTML=buildVillageShopHTML();if(activeTab==='iv')renderIv();addLine({cls:'lt',text:`💰 ${item.name}${cnt>1?` ×${cnt}`:''} 판매! (+${sp*cnt}G)`});}
-
-// 마을 대장간 강화
-function villageForge(entryIdx){
-  const FORGE_DATA2=[{cost:50,rate:90,stat:3},{cost:100,rate:80,stat:3},{cost:180,rate:70,stat:4},{cost:300,rate:55,stat:4},{cost:500,rate:40,stat:5},{cost:800,rate:30,stat:5},{cost:1200,rate:20,stat:6},{cost:2000,rate:15,stat:6},{cost:3000,rate:10,stat:7},{cost:5000,rate:7,stat:8}];
+function villageForge(entryIdx,bless=false){
+  const FD=[{cost:50,rate:90,stat:3},{cost:100,rate:80,stat:3},{cost:180,rate:70,stat:4},{cost:300,rate:55,stat:4},{cost:500,rate:40,stat:5},{cost:800,rate:30,stat:5},{cost:1200,rate:20,stat:6},{cost:2000,rate:15,stat:6},{cost:3000,rate:10,stat:7},{cost:5000,rate:7,stat:8}];
   const forgeables=[];
   (me.inventory||[]).forEach((item,idx)=>{const m=item.name.match(/^(.+?) \+(\d+)$/);const base=m?m[1]:item.name;const lv=m?parseInt(m[2]):0;const it=ITEMS[base];if(it&&(it.type==='weapon'||it.type==='armor')&&lv<10)forgeables.push({name:item.name,idx,base,lv,loc:'inv'});});
   const eq=me.equipped||{};Object.entries(eq).forEach(([slot,nm])=>{const m=nm?.match(/^(.+?) \+(\d+)$/);const base=m?m[1]:nm;const lv=m?parseInt(m[2]):0;const it=nm?ITEMS[base]:null;if(it&&lv<10)forgeables.push({name:nm,idx:slot,base,lv,loc:'equip',slot});});
   const entry=forgeables[entryIdx];if(!entry)return;
-  const fd=FORGE_DATA2[entry.lv];if(!fd)return;
+  const fd=FD[entry.lv];if(!fd)return;
   if((me.gold||0)<fd.cost){addLine({cls:'sy',text:'💰 금화 부족!'});return;}
+  if(bless){
+    if(countInInventory('축복의 물')<1){addLine({cls:'sy',text:'🫧 축복의 물이 없습니다!'});return;}
+    removeFromInventory('축복의 물',1);
+    addLine({cls:'sy',text:'🫧 축복의 물 사용! 성공률 60% 적용'});
+  }
   me.gold-=fd.cost;
-  const success=Math.random()*100<fd.rate;
-  const mkName=(base,lv)=>lv>0?`${base} +${lv}`:base;
+  const rate=bless?60:fd.rate;
+  const success=Math.random()*100<rate;
+  const mk=(base,lv)=>lv>0?`${base} +${lv}`:base;
   if(success){
-    const newName=mkName(entry.base,entry.lv+1);
-    if(entry.loc==='inv'){const inv=me.inventory||[];const it=inv.find(x=>x.name===entry.name);if(it)it.name=newName;me.inventory=inv;}
-    else{const eq2=me.equipped||{};eq2[entry.slot]=newName;me.equipped=eq2;}
-    addLine({cls:'lv',text:`✨ 강화 성공! ${entry.name}→${newName} (-${fd.cost}G)`});
+    const nn=mk(entry.base,entry.lv+1);
+    if(entry.loc==='inv'){const inv=me.inventory||[];const it=inv.find(x=>x.name===entry.name);if(it)it.name=nn;me.inventory=inv;}
+    else{const eq2=me.equipped||{};eq2[entry.slot]=nn;me.equipped=eq2;}
+    addLine({cls:'lv',text:`✨ ${bless?'[축복] ':''}강화 성공! ${entry.name}→${nn} (-${fd.cost}G)`});
   } else {
-    const newLv=Math.max(0,entry.lv-1);const newName=mkName(entry.base,newLv);
-    if(entry.loc==='inv'){const inv=me.inventory||[];const it=inv.find(x=>x.name===entry.name);if(it)it.name=newName;me.inventory=inv;}
-    else{const eq2=me.equipped||{};eq2[entry.slot]=newName;me.equipped=eq2;}
-    addLine({cls:'bt',text:`💔 강화 실패... ${entry.name}→${newName} (-${fd.cost}G)`});
+    const nl=Math.max(0,entry.lv-1);const nn=mk(entry.base,nl);
+    if(entry.loc==='inv'){const inv=me.inventory||[];const it=inv.find(x=>x.name===entry.name);if(it)it.name=nn;me.inventory=inv;}
+    else{const eq2=me.equipped||{};eq2[entry.slot]=nn;me.equipped=eq2;}
+    addLine({cls:'bt',text:`💔 강화 실패... ${entry.name}→${nn} (-${fd.cost}G)`});
   }
   saveProfile();document.getElementById('vmodal-body').innerHTML=buildVillageForgeHTML();renderCurTab();
 }
-
 // 마을 대장간 제작
 function villageCraft(idx){
   const r=RECIPES[idx];if(!r)return;
