@@ -15,7 +15,9 @@
   --bg:#1a1008;--border:#4a3018;--border2:#6a4820;
   --green:#4a9e6a;--red:#c84a4a;--blue:#4a7ec8;
 }
-html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-serif;overflow:hidden}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-serif;overflow:hidden;
+  -webkit-user-select:none;-moz-user-select:none;user-select:none;-webkit-touch-callout:none;}
+input,textarea{-webkit-user-select:text;-moz-user-select:text;user-select:text;}
 
 /* 로딩 */
 #loading{position:fixed;inset:0;background:#1a1008;display:flex;align-items:center;justify-content:center;z-index:300;flex-direction:column;gap:12px}
@@ -306,6 +308,7 @@ const ITEMS={
   '큰 물약':        {icon:'⚗️',type:'potion',hp:80,  desc:'HP 80 회복', rarity:'u'},
   '엘릭서':         {icon:'💎',type:'potion',hp:9999,desc:'HP 전체 회복',rarity:'r'},
   '마법의 강화물약':{icon:'🌟',type:'buff',  desc:'2분간 공격+20, 이동+50%, 공격속도+50%', rarity:'e'},
+  '축복의 물':      {icon:'🫧',type:'bless', desc:'강화 시 성공률 60% 보장 (1회 사용)',      rarity:'e'},
 };
 const NC=['#e0b060','#a0c8e0','#b0e0a0','#e0a0c0','#c0a0e0','#e0c8a0'];
 const PW=1100,PH=700;
@@ -328,6 +331,9 @@ function resize(){const c=document.getElementById('pub-container');canvas.width=
 window.addEventListener('resize',resize);
 // 우클릭 컨텍스트 메뉴 전체 차단
 document.addEventListener('contextmenu',e=>{e.preventDefault();});
+// 더블클릭 텍스트 선택 메뉴 차단
+document.addEventListener('selectstart',e=>{e.preventDefault();});
+document.addEventListener('mousedown',e=>{if(e.detail>1)e.preventDefault();});
 function nc(u){if(!u)return'#a07840';let h=0;for(const c of u)h=(h*31+c.charCodeAt(0))%NC.length;return NC[h];}
 
 // ── 스탯 계산 ─────────────────────────────────────
@@ -1133,11 +1139,13 @@ function plusColor(level){
 
 function buildForgeHTML(){
   const gold=me.gold||0;
+  const blessCount=(me.inventory||[]).reduce((s,it)=>it.name==='축복의 물'?s+(it.count||1):s,0);
   const items=getForgeableItems();
   let h=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border)">
     <div class="gold-display">💰 ${gold}G</div>
+    <div style="font-size:11px;color:${blessCount>0?'#6ab4ff':'var(--text-mute)'}">🫧 축복의 물 ${blessCount}개</div>
   </div>
-  <div style="font-size:10px;color:var(--text-mute);margin-bottom:10px;line-height:1.7">강화 실패 시 강화 수치만 1 감소합니다</div>`;
+  <div style="font-size:10px;color:var(--text-mute);margin-bottom:10px;line-height:1.7">강화 실패 시 강화 수치만 1 감소 · 🫧 축복 사용 시 60% 보장</div>`;
   if(!items.length){
     h+=`<div style="text-align:center;padding:2rem;color:var(--text-mute);font-size:12px">강화 가능한 무기/방어구가 없습니다</div>`;
   } else {
@@ -1168,9 +1176,14 @@ function buildForgeHTML(){
           <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:4px;padding:5px;text-align:center"><div style="color:var(--text-mute)">성공률</div><div style="color:${fd.rate>=70?'#4a9e6a':fd.rate>=40?'#c8874a':'#c84a4a'};font-weight:500">${fd.rate}%</div></div>
           <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:4px;padding:5px;text-align:center"><div style="color:var(--text-mute)">목표</div><div class="forge-plus ${nextPlusCls}" style="font-weight:700">+${entry.level+1}</div></div>
         </div>
-        <button class="forge-btn" onclick="forgeItem(${i})" ${canAfford?'':'disabled'}>
-          ${canAfford?`🔨 강화 +${entry.level} → +${entry.level+1}`:'💰 금화 부족'}
-        </button>
+        <div style="display:flex;gap:5px">
+          <button class="forge-btn" onclick="forgeItem(${i},false)" ${canAfford?'':'disabled'} style="flex:1">
+            ${canAfford?`🔨 강화 +${entry.level}→+${entry.level+1}`:'💰 금화 부족'}
+          </button>
+          ${blessCount>0&&canAfford
+            ?`<button onclick="forgeItem(${i},true)" style="flex:1;padding:7px;background:rgba(100,180,255,0.18);border:1px solid #4a9ecf;border-radius:5px;color:#6ab4ff;font-size:11px;cursor:pointer;font-family:inherit">✨ 축복(60%)</button>`
+            :`<button disabled style="flex:1;padding:7px;background:rgba(40,40,40,0.2);border:1px solid var(--border);border-radius:5px;color:var(--text-mute);font-size:10px;cursor:not-allowed;font-family:inherit">🫧 축복없음</button>`}
+        </div>
       </div>`;
     });
   }
@@ -1178,14 +1191,25 @@ function buildForgeHTML(){
 }
 function renderFg(){const b=document.getElementById('modal-body');if(b&&document.getElementById('inn-modal').style.display==='flex')b.innerHTML=buildForgeHTML();}
 
-function forgeItem(entryIdx){
+function forgeItem(entryIdx,bless=false){
   const items=getForgeableItems();
   const entry=items[entryIdx];if(!entry)return;
   const fd=FORGE_DATA[entry.level];if(!fd)return;
   if((me.gold||0)<fd.cost){addChatLine('sys','💰 금화가 부족합니다!');return;}
+  if(bless){
+    const bc=(me.inventory||[]).reduce((s,it)=>it.name==='축복의 물'?s+(it.count||1):s,0);
+    if(bc<1){addChatLine('sys','🫧 축복의 물이 없습니다!');return;}
+    // 축복의 물 1개 제거
+    const inv=me.inventory||[];
+    const bi=inv.findIndex(x=>x.name==='축복의 물');
+    if(bi>=0){if((inv[bi].count||1)>1)inv[bi].count--;else inv.splice(bi,1);}
+    me.inventory=inv;
+    addChatLine('sys','🫧 축복의 물 사용! 성공률 60% 적용');
+  }
   me.gold=(me.gold||0)-fd.cost;
-  const success=Math.random()*100<fd.rate;
-  const def=ITEMS[entry.baseName]||{};const icon=def.icon||'📦';
+  const rate=bless?60:fd.rate;
+  const success=Math.random()*100<rate;
+  const def=ITEMS[entry.baseName]||{};
   if(success){
     const newLevel=entry.level+1;const newName=makeItemName(entry.baseName,newLevel);
     if(entry.location==='inv'){const inv=me.inventory||[];if(inv[entry.idx])inv[entry.idx].name=newName;me.inventory=inv;}
@@ -1193,7 +1217,7 @@ function forgeItem(entryIdx){
     saveProfile();
     document.getElementById('modal-body').innerHTML=buildForgeHTML();
     if(activeTab==='eq')renderEq();if(activeTab==='iv')renderIv();
-    addChatLine('loot',`✨ 강화 성공! ${entry.baseName} +${entry.level} → +${newLevel} (-${fd.cost}G)`);
+    addChatLine('loot',`✨ ${bless?'[축복] ':''}강화 성공! ${entry.baseName} +${entry.level} → +${newLevel} (-${fd.cost}G)`);
     if(newLevel>=MAX_FORGE)addChatLine('loot',`🏆 최대 강화 +${MAX_FORGE} 달성!`);
   } else {
     const newLevel=Math.max(0,entry.level-1);const newName=makeItemName(entry.baseName,newLevel);
