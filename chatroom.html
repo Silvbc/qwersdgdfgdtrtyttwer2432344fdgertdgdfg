@@ -268,13 +268,26 @@ const ITEMS={
   '용사의 활':      {icon:'🏹',type:'weapon',slot:'weapon',atk:15, desc:'멀리서도 강력하다',        rarity:'u'},
   '성스러운 지팡이':{icon:'✨',type:'weapon',slot:'weapon',atk:10, desc:'치유의 힘이 깃들어 있다',  rarity:'u'},
   '불꽃 검':        {icon:'🔥',type:'weapon',slot:'weapon',atk:22, desc:'화염이 깃든 전설의 검',    rarity:'e'},
+  '미스릴 검':      {icon:'🌟',type:'weapon',slot:'weapon',atk:35, desc:'미스릴로 제련한 성검',     rarity:'e'},
   '가죽 갑옷':      {icon:'🦺',type:'armor', slot:'armor', def:3,  desc:'가벼운 가죽 갑옷',         rarity:'c'},
   '철 갑옷':        {icon:'🛡️',type:'armor', slot:'armor', def:7,  desc:'튼튼한 철 갑옷',          rarity:'u'},
   '마법 로브':      {icon:'👘',type:'armor', slot:'armor', def:5,  desc:'마법사의 로브',            rarity:'u'},
   '용의 비늘 갑옷': {icon:'🐉',type:'armor', slot:'armor', def:12, desc:'드래곤 비늘 갑옷',         rarity:'e'},
+  '미스릴 갑옷':    {icon:'💠',type:'armor', slot:'armor', def:20, desc:'미스릴로 제련한 갑옷',     rarity:'e'},
+  // 가방
+  '낡은 가방':      {icon:'👜',type:'bag',   slot:'bag',   slots:20,desc:'인벤토리 +20칸',           rarity:'c'},
+  '큰 가방':        {icon:'🎒',type:'bag',   slot:'bag',   slots:20,desc:'인벤토리 +20칸 (더 튼튼)', rarity:'u'},
+  '마법 가방':      {icon:'✨',type:'bag',   slot:'bag',   slots:20,desc:'인벤토리 +20칸 (마법)',    rarity:'r'},
+  // 재료
+  '미스릴 광석':    {icon:'🪨',type:'material',desc:'신비한 빛을 내는 광석',  rarity:'r'},
+  '늑대 발톱':      {icon:'🦴',type:'material',desc:'예리한 늑대 발톱',       rarity:'c'},
+  '해골 뼈':        {icon:'🦷',type:'material',desc:'단단한 해골 뼈',         rarity:'c'},
+  '거미 독':        {icon:'☠️',type:'material',desc:'거대거미의 독',          rarity:'u'},
+  // 물약
   '작은 물약':      {icon:'🧪',type:'potion',hp:30,  desc:'HP 30 회복', rarity:'c'},
   '큰 물약':        {icon:'⚗️',type:'potion',hp:80,  desc:'HP 80 회복', rarity:'u'},
   '엘릭서':         {icon:'💎',type:'potion',hp:9999,desc:'HP 전체 회복',rarity:'r'},
+  '마법의 강화물약':{icon:'🌟',type:'buff',  desc:'2분간 공격+20, 이동+50%, 공격속도+50%', rarity:'e'},
 };
 const NC=['#e0b060','#a0c8e0','#b0e0a0','#e0a0c0','#c0a0e0','#e0c8a0'];
 const PW=1100,PH=700;
@@ -786,27 +799,18 @@ function renderSt(){
     </div>`;
 }
 
+function innMaxSlots(){const bag=me?.equipped?.bag;const bd=bag?ITEMS[bag?.replace(/ \+\d+$/,'')]:null;return 20+(bd?.slots||0);}
+function innStackable(name){const bn=name?.replace(/ \+\d+$/,'');const d=ITEMS[bn];if(!d)return false;return!(d.type==='weapon'||d.type==='armor'||d.type==='bag'||name==='엘릭서'||d.type==='buff');}
+
 function renderEq(){
   const eq=me.equipped||{};
-  const slots=[['weapon','⚔️ 무기'],['armor','🛡️ 갑옷']];
+  const slots=[['weapon','⚔️ 무기'],['armor','🛡️ 갑옷'],['bag','🎒 가방']];
   let h='<div class="eq-grid">';
   slots.forEach(([s,lbl])=>{
-    const nm=eq[s];
-    // 강화된 이름(강철 검 +2)에서 기본 이름 추출
-    const baseName=nm?nm.replace(/ \+\d+$/,''):null;
-    const it=baseName?ITEMS[baseName]:null;
-    if(nm&&it){
-      const bonus=forgeBonus(nm);
-      const st=it.atk?`공격 +${it.atk+bonus}`:it.def?`방어 +${it.def+bonus}`:'';
-      h+=`<div class="eq-slot has" onclick="innUnequip('${s}')">
-        <div class="eq-lbl">${lbl}</div>
-        <div class="eq-icon">${it.icon}</div>
-        <div class="eq-name">${nm}</div>
-        <div class="eq-stat">${st}</div>
-      </div>`;
-    } else {
-      h+=`<div class="eq-slot"><div class="eq-lbl">${lbl}</div><div style="font-size:20px;opacity:.3;margin:4px 0">○</div><div style="font-size:10px;color:var(--text-mute)">비어있음</div></div>`;
-    }
+    const nm=eq[s];const baseName=nm?nm.replace(/ \+\d+$/,''):null;const it=baseName?ITEMS[baseName]:null;
+    if(nm&&it){const bonus=forgeBonus(nm);const st=it.atk?`공격 +${it.atk+bonus}`:it.def?`방어 +${it.def+bonus}`:it.slots?`+${it.slots}칸`:'';
+      h+=`<div class="eq-slot has" onclick="innUnequip('${s}')">${lbl? `<div class="eq-lbl">${lbl}</div>`:""}<div class="eq-icon">${it.icon}</div><div class="eq-name">${nm}</div><div class="eq-stat">${st}</div></div>`;
+    } else h+=`<div class="eq-slot"><div class="eq-lbl">${lbl}</div><div style="font-size:20px;opacity:.3;margin:4px 0">○</div><div style="font-size:10px;color:var(--text-mute)">비어있음</div></div>`;
   });
   h+='</div><div style="font-size:10px;color:var(--text-mute);margin-top:6px">클릭 → 장착 해제</div>';
   document.getElementById('tc-eq').innerHTML=h;
@@ -814,74 +818,47 @@ function renderEq(){
 
 function innUnequip(slot){
   const eq=me.equipped||{};const nm=eq[slot];if(!nm)return;
-  const inv=me.inventory||[];
-  if(inv.length>=20)return;
+  const inv=me.inventory||[];const max=innMaxSlots();
+  if(inv.length>=max){addChatLine('sys','인벤토리가 가득 찼습니다!');return;}
   inv.push({name:nm,id:Date.now()});delete eq[slot];
   me.equipped=eq;me.inventory=inv;
   saveProfile();renderEq();renderIv();
   addChatLine('sys',`${nm} 장착 해제`);
 }
 
-// ── 아이템 툴팁 ───────────────────────────────────
-function showInnTip(e, itemName){
-  const baseName=itemName.replace(/ \+\d+$/,'');
-  const forgeLevel=itemName.match(/\+(\d+)$/)?parseInt(itemName.match(/\+(\d+)$/)[1]):0;
-  const it=ITEMS[baseName]; if(!it) return;
-  const tt=document.getElementById('inn-tt');
-  document.getElementById('itn').textContent=it.icon+' '+itemName;
-  document.getElementById('ity').textContent=it.type==='weapon'?'⚔️ 무기':it.type==='armor'?'🛡️ 방어구':'💊 물약';
-  const bonus=forgeBonus(itemName);
-  const st=it.atk?`공격력 +${it.atk+bonus}${forgeLevel>0?` (기본${it.atk}+강화${bonus})`:''}`:
-           it.def?`방어력 +${it.def+bonus}${forgeLevel>0?` (기본${it.def}+강화${bonus})`:''}`:
-           it.hp?`HP +${it.hp>=9999?'전체':it.hp}`:'';
-  document.getElementById('its').textContent=st;
-  document.getElementById('itd').textContent=it.desc+(forgeLevel>0?` (강화 +${forgeLevel})`:'');
-  tt.style.display='block';
-  const x=e.clientX+12;
-  const ttW=200;
-  tt.style.left=(x+ttW>window.innerWidth ? e.clientX-ttW-8 : x)+'px';
-  tt.style.top=(e.clientY-10)+'px';
-}
-function hideInnTip(){ document.getElementById('inn-tt').style.display='none'; }
-
 function renderIv(){
-  const inv=me.inventory||[];
+  const inv=me.inventory||[];const maxSlots=innMaxSlots();const hasBag=!!(me.equipped?.bag);const cols=hasBag?5:4;
   const rarMap={c:'',u:'ru',r:'rc',e:'re'};
-  let h=`<div style="font-size:11px;color:var(--text-dim);margin-bottom:6px">${inv.length}/20 칸 사용 중</div><div class="inv-grid">`;
-  for(let i=0;i<20;i++){
+  let h=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+    <span style="font-size:11px;color:var(--text-dim)">${inv.length}/${maxSlots}칸</span>
+    ${hasBag?`<span style="font-size:10px;color:var(--amber)">🎒 ${me.equipped.bag}</span>`:'<span style="font-size:10px;color:var(--text-mute)">가방 없음 (20칸)</span>'}
+  </div><div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:4px">`;
+  for(let i=0;i<maxSlots;i++){
     const item=inv[i];
-    if(item){
-      const def=ITEMS[item.name]||{icon:'📦',rarity:'c'};
-      const rc=rarMap[def.rarity]||'';
-      const st=def.atk?`⚔️+${def.atk}`:def.def?`🛡️+${def.def}`:def.hp?`💊+${def.hp>=9999?'전체':def.hp}`:'';
-      h+=`<div class="inv-cell ${rc}" onclick="innUseItem(${i})"
-        onmouseenter="showInnTip(event,'${item.name}')"
-        onmouseleave="hideInnTip()">
-        <div class="inv-icon">${def.icon}</div>
-        <div class="inv-name">${item.name}</div>
-        ${st?`<div style="font-size:8px;color:#4a9e6a">${st}</div>`:''}
-      </div>`;
+    if(item){const bn=item.name.replace(/ \+\d+$/,'');const def=ITEMS[bn]||{icon:'📦',rarity:'c'};const rc=rarMap[def.rarity]||'';const cnt=item.count||1;
+      const badge=cnt>1?`<div style="position:absolute;bottom:2px;right:2px;background:rgba(0,0,0,.8);color:#e8d0a0;font-size:9px;font-weight:700;padding:0 2px;border-radius:3px">${cnt}</div>`:'';
+      h+=`<div class="inv-cell ${rc}" style="position:relative" onclick="innUseItem(${i})" onmouseenter="showInnTip(event,'${item.name}')" onmouseleave="hideInnTip()"><div class="inv-icon">${def.icon}</div><div class="inv-name">${item.name}</div>${badge}</div>`;
     } else h+=`<div class="inv-cell empty"></div>`;
   }
-  h+='</div><div style="font-size:10px;color:var(--text-mute);margin-top:6px">무기/갑옷: 장착 · 물약: 사용 · 마우스 올려서 정보확인</div>';
+  h+='</div><div style="font-size:10px;color:var(--text-mute);margin-top:6px">장착/사용/가방: 클릭</div>';
   document.getElementById('tc-iv').innerHTML=h;
 }
 
 function innUseItem(idx){
   const inv=me.inventory||[];const item=inv[idx];if(!item)return;
-  const def=ITEMS[item.name];if(!def)return;
+  const bn=item.name.replace(/ \+\d+$/,'');const def=ITEMS[bn];if(!def)return;
   if(def.type==='potion'){
     const mh=maxHp();const healed=Math.min(def.hp||0,mh-me.hp);
     me.hp=Math.min(mh,me.hp+(def.hp||0));
-    inv.splice(idx,1);me.inventory=inv;
-    updateHpHud();saveProfile();renderIv();
+    if(innStackable(item.name)&&(item.count||1)>1){item.count--;}else{inv.splice(idx,1);}
+    me.inventory=inv;updateHpHud();saveProfile();renderIv();if(activeTab==='st')renderSt();
     addChatLine('heal',`🧪 ${item.name} 사용! HP +${healed}`);
   } else if(def.slot){
-    const eq=me.equipped||{};
-    if(eq[def.slot])inv.push({name:eq[def.slot],id:Date.now()});
+    const eq=me.equipped||{};const max=innMaxSlots();
+    if(eq[def.slot]&&inv.length<max)inv.push({name:eq[def.slot],id:Date.now()});
     eq[def.slot]=item.name;inv.splice(idx,1);
     me.equipped=eq;me.inventory=inv;
-    saveProfile();renderEq();renderIv();
+    saveProfile();renderEq();renderIv();if(activeTab==='st')renderSt();
     addChatLine('sys',`🗡️ ${item.name} 장착!`);
   }
 }
@@ -892,77 +869,51 @@ function buildHealerHTML(){
   const smallCount=inv.filter(it=>it.name==='작은 물약').length;
   const bigCount=inv.filter(it=>it.name==='큰 물약').length;
   const elixirCount=inv.filter(it=>it.name==='엘릭서').length;
-  const canSmall=smallCount>=5;
-  const canBig=bigCount>=5;
-  return `
-    <div style="text-align:center;padding:10px 0 14px">
-      <div style="font-size:38px;margin-bottom:6px">🧝‍♀️</div>
-      <div style="font-size:13px;color:var(--text);margin-bottom:6px;font-weight:500">치료사 엘리나</div>
-      <div style="font-size:11px;color:var(--text-dim);line-height:1.7;margin-bottom:14px">
-        "물약들을 모아오면 더 좋은 물약으로<br>만들어 드릴게요!"
+  const buffCount=inv.filter(it=>it.name==='마법의 강화물약').length;
+  const canSmall=smallCount>=5, canBig=bigCount>=5, canElixir=elixirCount>=5;
+  const row=(fromIcon,from,fromCnt,canDo,toIcon,to,toCnt,fn,extra='')=>`
+    <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:11px;margin-bottom:9px">
+      <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:7px">
+        <div style="text-align:center"><div style="font-size:22px">${fromIcon}</div><div style="font-size:10px;color:var(--text-dim)">${from} × 5</div><div style="font-size:10px;color:${canDo?'#4a9e6a':'#c84a4a'}">보유 ${fromCnt}</div></div>
+        <div style="font-size:16px;color:var(--amber)">→</div>
+        <div style="text-align:center"><div style="font-size:22px">${toIcon}</div><div style="font-size:10px;color:var(--text-dim)">${to} × 1</div><div style="font-size:10px;color:var(--text-mute)">보유 ${toCnt}</div></div>
       </div>
-    </div>
-
-    <!-- 교환 1: 작은 물약 5개 → 큰 물약 1개 -->
-    <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px">
-      <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:8px">
-        <div style="text-align:center">
-          <div style="font-size:24px">🧪</div>
-          <div style="font-size:10px;color:var(--text-dim)">작은 물약 × 5</div>
-          <div style="font-size:10px;color:${canSmall?'#4a9e6a':'#c84a4a'};margin-top:2px">보유: ${smallCount}개</div>
-        </div>
-        <div style="font-size:18px;color:var(--amber)">→</div>
-        <div style="text-align:center">
-          <div style="font-size:24px">⚗️</div>
-          <div style="font-size:10px;color:var(--text-dim)">큰 물약 × 1</div>
-          <div style="font-size:10px;color:var(--text-mute);margin-top:2px">보유: ${bigCount}개</div>
-        </div>
-      </div>
-      <button onclick="exchangeSmall()"
-        style="width:100%;padding:8px;background:${canSmall?'rgba(74,158,106,0.2)':'rgba(40,40,40,0.2)'};
-          border:1px solid ${canSmall?'#4a7e4a':'var(--border)'};border-radius:6px;
-          color:${canSmall?'#4a9e6a':'var(--text-mute)'};font-size:12px;
-          cursor:${canSmall?'pointer':'not-allowed'};font-family:'Noto Sans KR',sans-serif">
-        ${canSmall?'🔄 큰 물약으로 교환':'작은 물약 부족 ('+smallCount+'/5)'}
-      </button>
-    </div>
-
-    <!-- 교환 2: 큰 물약 5개 → 엘릭서 1개 -->
-    <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px">
-      <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:8px">
-        <div style="text-align:center">
-          <div style="font-size:24px">⚗️</div>
-          <div style="font-size:10px;color:var(--text-dim)">큰 물약 × 5</div>
-          <div style="font-size:10px;color:${canBig?'#4a9e6a':'#c84a4a'};margin-top:2px">보유: ${bigCount}개</div>
-        </div>
-        <div style="font-size:18px;color:var(--amber)">→</div>
-        <div style="text-align:center">
-          <div style="font-size:24px">💎</div>
-          <div style="font-size:10px;color:var(--text-dim)">엘릭서 × 1</div>
-          <div style="font-size:10px;color:var(--text-mute);margin-top:2px">보유: ${elixirCount}개</div>
-        </div>
-      </div>
-      <button onclick="exchangePotion()"
-        style="width:100%;padding:8px;background:${canBig?'rgba(160,96,255,0.2)':'rgba(40,40,40,0.2)'};
-          border:1px solid ${canBig?'#8040c0':'var(--border)'};border-radius:6px;
-          color:${canBig?'#c080ff':'var(--text-mute)'};font-size:12px;
-          cursor:${canBig?'pointer':'not-allowed'};font-family:'Noto Sans KR',sans-serif">
-        ${canBig?'✨ 엘릭서로 교환':'큰 물약 부족 ('+bigCount+'/5)'}
-      </button>
-    </div>
-
-    <div style="font-size:10px;color:var(--text-mute);text-align:center;line-height:1.7">
-      작은 물약 5개 → 큰 물약 1개<br>큰 물약 5개 → 엘릭서 1개
+      ${extra}
+      <button onclick="${fn}()" style="width:100%;padding:7px;background:${canDo?'rgba(74,158,106,0.18)':'rgba(30,30,30,0.3)'};border:1px solid ${canDo?'#4a7e4a':'var(--border)'};border-radius:5px;color:${canDo?'#80e0a0':'var(--text-mute)'};font-size:11px;cursor:${canDo?'pointer':'not-allowed'};font-family:inherit">${canDo?'🔄 교환하기':'부족 ('+fromCnt+'/5)'}</button>
     </div>`;
+  return `
+    <div style="text-align:center;padding:8px 0 10px">
+      <div style="font-size:32px;margin-bottom:4px">🧝‍♀️</div>
+      <div style="font-size:12px;color:var(--text);font-weight:500;margin-bottom:4px">치료사 엘리나</div>
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:10px">물약을 모아오면 더 좋은 것으로 바꿔드려요!</div>
+    </div>
+    ${row('🧪','작은 물약',smallCount,canSmall,'⚗️','큰 물약',bigCount,'exchangeSmall')}
+    ${row('⚗️','큰 물약',bigCount,canBig,'💎','엘릭서',elixirCount,'exchangePotion')}
+    <div style="background:rgba(160,96,255,0.07);border:1px solid #6030a0;border-radius:10px;padding:11px;margin-bottom:9px">
+      <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:7px">
+        <div style="text-align:center"><div style="font-size:22px">💎</div><div style="font-size:10px;color:var(--text-dim)">엘릭서 × 5</div><div style="font-size:10px;color:${canElixir?'#4a9e6a':'#c84a4a'}">보유 ${elixirCount}</div></div>
+        <div style="font-size:16px;color:var(--amber)">→</div>
+        <div style="text-align:center"><div style="font-size:22px">🌟</div><div style="font-size:10px;color:#c080ff">마법의 강화물약</div><div style="font-size:10px;color:var(--text-mute)">보유 ${buffCount}</div></div>
+      </div>
+      <div style="font-size:10px;color:#a060e0;text-align:center;margin-bottom:7px">⚔️공격+20 · 🐾이동속도+50% · ⚡공격속도+50% · 2분간 지속</div>
+      <button onclick="exchangeElixir()" style="width:100%;padding:7px;background:${canElixir?'rgba(160,96,255,0.2)':'rgba(30,30,30,0.3)'};border:1px solid ${canElixir?'#8040c0':'var(--border)'};border-radius:5px;color:${canElixir?'#c080ff':'var(--text-mute)'};font-size:11px;cursor:${canElixir?'pointer':'not-allowed'};font-family:inherit">${canElixir?'🌟 마법의 강화물약 교환':'부족 ('+elixirCount+'/5)'}</button>
+    </div>
+    <div style="font-size:10px;color:var(--text-mute);text-align:center">🧪×5→⚗️ · ⚗️×5→💎 · 💎×5→🌟</div>`;
 }
+
 
 function exchangeSmall(){
   const inv=me.inventory||[];
-  const smallPotions=inv.filter(it=>it.name==='작은 물약');
-  if(smallPotions.length<5){addChatLine('sys','🧪 작은 물약이 5개 필요합니다!');return;}
-  if(inv.length>=20){addChatLine('sys','인벤토리가 가득 찼습니다!');return;}
+  const cnt=inv.filter(it=>it.name==='작은 물약').length;
+  if(cnt<5){addChatLine('sys','🧪 작은 물약이 5개 필요합니다! (현재 '+cnt+'개)');return;}
+  // 먼저 5개 제거 후 공간 확인
   let removed=0;
   for(let i=inv.length-1;i>=0&&removed<5;i--){if(inv[i].name==='작은 물약'){inv.splice(i,1);removed++;}}
+  if(inv.length>=20){
+    // 공간 없으면 롤백
+    for(let i=0;i<5;i++)inv.push({name:'작은 물약',id:Date.now()+i});
+    addChatLine('sys','인벤토리가 가득 찼습니다!');return;
+  }
   inv.push({name:'큰 물약',id:Date.now()});
   me.inventory=inv;saveProfile();
   document.getElementById('modal-body').innerHTML=buildHealerHTML();
@@ -972,16 +923,36 @@ function exchangeSmall(){
 
 function exchangePotion(){
   const inv=me.inventory||[];
-  const bigPotions=inv.filter(it=>it.name==='큰 물약');
-  if(bigPotions.length<5){addChatLine('sys','⚗️ 큰 물약이 5개 필요합니다!');return;}
-  if(inv.length>=20){addChatLine('sys','인벤토리가 가득 찼습니다!');return;}
+  const cnt=inv.filter(it=>it.name==='큰 물약').length;
+  if(cnt<5){addChatLine('sys','⚗️ 큰 물약이 5개 필요합니다! (현재 '+cnt+'개)');return;}
   let removed=0;
   for(let i=inv.length-1;i>=0&&removed<5;i--){if(inv[i].name==='큰 물약'){inv.splice(i,1);removed++;}}
+  if(inv.length>=20){
+    for(let i=0;i<5;i++)inv.push({name:'큰 물약',id:Date.now()+i});
+    addChatLine('sys','인벤토리가 가득 찼습니다!');return;
+  }
   inv.push({name:'엘릭서',id:Date.now()});
   me.inventory=inv;saveProfile();
   document.getElementById('modal-body').innerHTML=buildHealerHTML();
   if(activeTab==='iv')renderIv();
   addChatLine('heal','✨ 엘리나: 완성됐어요! 💎 엘릭서 1개 획득!');
+}
+
+function exchangeElixir(){
+  const inv=me.inventory||[];
+  const cnt=inv.filter(it=>it.name==='엘릭서').length;
+  if(cnt<5){addChatLine('sys','💎 엘릭서가 5개 필요합니다! (현재 '+cnt+'개)');return;}
+  let removed=0;
+  for(let i=inv.length-1;i>=0&&removed<5;i--){if(inv[i].name==='엘릭서'){inv.splice(i,1);removed++;}}
+  if(inv.length>=20){
+    for(let i=0;i<5;i++)inv.push({name:'엘릭서',id:Date.now()+i});
+    addChatLine('sys','인벤토리가 가득 찼습니다!');return;
+  }
+  inv.push({name:'마법의 강화물약',id:Date.now()});
+  me.inventory=inv;saveProfile();
+  document.getElementById('modal-body').innerHTML=buildHealerHTML();
+  if(activeTab==='iv')renderIv();
+  addChatLine('heal','🌟 엘리나: 완성됐어요! 🌟 마법의 강화물약 1개 획득! 2분간 강화됩니다!');
 }
 
 function buildShopHTML(){
