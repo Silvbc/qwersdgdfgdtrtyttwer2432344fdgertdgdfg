@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>황금 용 여관</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Noto+Sans+KR:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --amber:#c8874a;--amber-dim:#8a5a28;--amber-glow:rgba(200,135,74,0.18);
+  --gold:#c9a84c;--gold-glow:rgba(201,168,76,0.25);
+  --text:#e8d0a0;--text-dim:#a07840;--text-mute:#604820;
+  --bg:#1a1008;--border:#4a3018;--border2:#6a4820;
+  --green:#4a9e6a;--red:#c84a4a;--blue:#4a7ec8;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-serif;overflow:hidden}
+
+/* 로딩 */
+#loading{position:fixed;inset:0;background:#1a1008;display:flex;align-items:center;justify-content:center;z-index:300;flex-direction:column;gap:12px}
+.spin{font-size:32px;animation:spin 1.5s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loading p{font-size:13px;color:var(--text-dim);font-family:'Cinzel',serif}
+
+/* 로그인 */
+#login-screen{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,#2a1a08 0%,#0d0a04 100%)}
+.lp{width:360px;padding:2.5rem 2rem;background:linear-gradient(160deg,#e8d5a0 0%,#d4b878 100%);border:3px solid var(--amber);border-radius:4px;box-shadow:0 0 40px rgba(200,135,74,0.4);position:relative}
+.lp::before,.lp::after{content:'✦';position:absolute;font-size:20px;color:var(--amber)}
+.lp::before{top:10px;left:14px}.lp::after{bottom:10px;right:14px}
+.is{text-align:center;margin-bottom:1.5rem;border-bottom:2px solid rgba(42,26,10,0.3);padding-bottom:1rem}
+.is .ic{font-size:36px;display:block;margin-bottom:4px}
+.is h1{font-family:'Cinzel',serif;font-size:20px;color:#2a1a0a;letter-spacing:1px}
+.is p{font-size:12px;color:var(--amber-dim);margin-top:3px}
+.pf{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+.pf label{font-size:12px;color:#2a1a0a;font-weight:500;opacity:.7}
+.pf input{background:rgba(42,26,10,0.08);border:1px solid rgba(42,26,10,0.3);border-radius:3px;padding:9px 12px;font-size:14px;font-family:'Noto Sans KR',sans-serif;color:#2a1a0a;outline:none}
+.pf input::placeholder{color:rgba(42,26,10,0.35)}
+.err{font-size:12px;color:#8a1a0a;min-height:16px;margin-bottom:4px}
+.btn-inn{width:100%;padding:11px;background:linear-gradient(135deg,#8a5a28 0%,#5a3a10 100%);color:#e8d5a0;border:2px solid var(--amber-dim);border-radius:4px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Cinzel',serif;letter-spacing:1px}
+.btn-inn:hover{filter:brightness(1.15)}
+
+/* 게임 레이아웃 */
+#game-wrap{display:none;height:100vh;flex-direction:row}
+#pub-container{flex:1;position:relative;overflow:hidden}
+#pub-canvas{position:absolute;top:0;left:0;display:block}
+#ents{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
+
+/* HP HUD */
+#regen-notice{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);background:rgba(74,158,106,0.92);border:1px solid #4a9e6a;border-radius:20px;padding:5px 14px;font-size:11px;color:#e8ffe8;font-weight:500;display:none;pointer-events:none}
+#hp-hud{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(10,6,2,0.88);border:1px solid var(--border2);border-radius:20px;padding:5px 14px;display:flex;align-items:center;gap:8px;font-size:12px;pointer-events:none;white-space:nowrap}
+.hb{width:90px;height:6px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden}
+.hf{height:100%;border-radius:3px;background:#4a9e6a;transition:width .4s}
+
+/* 캐릭터 */
+.character{position:absolute;display:flex;flex-direction:column;align-items:center;pointer-events:none;transition:left .18s ease-out,top .18s ease-out}
+.char-svg{width:36px;height:48px;overflow:visible;display:block}
+.char-shadow{width:24px;height:6px;background:rgba(0,0,0,0.35);border-radius:50%;margin-top:-4px}
+.clbl{font-size:10px;white-space:nowrap;margin-top:2px;background:rgba(10,6,2,0.85);padding:1px 6px;border-radius:10px;color:var(--text);border:1px solid var(--border2)}
+.cbub{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#e8d5a0,#d4b878);border:1px solid var(--amber-dim);border-radius:8px;padding:5px 10px;font-size:11px;white-space:nowrap;max-width:190px;overflow:hidden;text-overflow:ellipsis;color:#2a1a0a;font-weight:500;box-shadow:0 3px 12px rgba(0,0,0,0.5);animation:pop .18s ease;z-index:10}
+.cbub::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--amber-dim)}
+@keyframes pop{from{opacity:0;transform:translateX(-50%) scale(.8)}to{opacity:1;transform:translateX(-50%) scale(1)}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+.character.walking .char-svg{animation:bob .35s ease infinite}
+.ripple{position:absolute;width:18px;height:18px;border-radius:50%;border:2px solid var(--gold);transform:translate(-50%,-50%) scale(0);animation:rip .5s ease-out forwards;pointer-events:none}
+@keyframes rip{to{transform:translate(-50%,-50%) scale(3.5);opacity:0}}
+
+/* 사이드 패널 */
+#side-panel{
+  width:290px;background:linear-gradient(180deg,#1e1208 0%,#150e06 100%);
+  border-left:2px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;
+}
+.ptop{padding:10px 14px;border-bottom:1px solid var(--border);background:linear-gradient(90deg,rgba(200,135,74,0.08),transparent);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.iname{font-family:'Cinzel',serif;font-size:13px;color:var(--gold);letter-spacing:.5px}
+.btnb{background:transparent;border:1px solid var(--border2);border-radius:4px;color:var(--text-dim);padding:5px 10px;font-size:11px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:all .15s}
+.btnb:hover{color:var(--text);border-color:var(--amber-dim);background:var(--amber-glow)}
+
+/* 탭 (3개) */
+.tabs3{display:flex;gap:4px;padding:8px 10px;border-bottom:1px solid var(--border);flex-shrink:0}
+.t3{flex:1;padding:6px 4px;background:transparent;border:1px solid var(--border);border-radius:4px;color:var(--text-mute);font-size:11px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:all .15s;text-align:center}
+.t3:hover{color:var(--text-dim);border-color:var(--border2)}
+.t3.ac{background:rgba(200,135,74,0.12);border-color:var(--amber-dim);color:var(--amber)}
+
+/* 탭 콘텐츠 */
+.tab-content{flex:1;overflow-y:auto;padding:10px 12px;min-height:0;display:none;flex-direction:column;gap:8px}
+.tab-content.active{display:flex}
+.tab-content::-webkit-scrollbar{width:3px}
+.tab-content::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* 상태창 스타일 */
+.stat-hero{display:flex;align-items:center;gap:10px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.stat-lv{margin-left:auto;font-family:'Cinzel',serif;font-size:13px;color:var(--amber)}
+.hp-track{height:7px;background:rgba(255,255,255,0.07);border-radius:4px;overflow:hidden;border:1px solid var(--border)}
+.hp-fill-s{height:100%;border-radius:4px;transition:width .4s}
+.exp-track{height:4px;background:rgba(255,255,255,0.05);border-radius:2px;overflow:hidden}
+.exp-fill-s{height:100%;background:var(--blue);border-radius:2px;transition:width .4s}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.stat-box{background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:11px;color:var(--text-dim)}
+.stat-box b{display:block;font-size:13px;color:var(--text);font-weight:500;margin-top:2px}
+
+/* 장비 슬롯 */
+.eq-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.eq-slot{background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:6px;padding:10px;text-align:center;min-height:72px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
+.eq-slot.has{border-color:var(--amber-dim);background:rgba(200,135,74,0.08);cursor:pointer}
+.eq-slot.has:hover{border-color:var(--gold);background:rgba(200,135,74,0.15)}
+.eq-lbl{font-size:10px;color:var(--text-mute);letter-spacing:.5px}
+.eq-icon{font-size:20px}
+.eq-name{font-size:10px;color:var(--amber)}
+.eq-stat{font-size:10px;color:var(--green)}
+
+/* 인벤토리 */
+.inv-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.inv-cell{background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:5px;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;transition:all .15s;position:relative}
+.inv-cell:hover{border-color:var(--amber-dim);background:rgba(200,135,74,0.1)}
+.inv-cell.empty{cursor:default;opacity:.4}
+.inv-cell.empty:hover{border-color:var(--border);background:rgba(255,255,255,0.04)}
+.inv-icon{font-size:17px}.inv-name{font-size:8px;color:var(--text-dim);text-align:center;line-height:1.2;overflow:hidden;max-width:95%;text-overflow:ellipsis;white-space:nowrap}
+.rc{border-color:#4a7e4a!important}.ru{border-color:#4a4a9e!important}.re{border-color:#8a4a9e!important}
+
+/* 상점 아이템 */
+.shop-item{display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:6px;margin-bottom:6px;transition:all .15s}
+.shop-item:hover{border-color:var(--amber-dim);background:rgba(200,135,74,0.07)}
+.shop-icon{font-size:20px;flex-shrink:0}
+.shop-info{flex:1;min-width:0}
+.shop-name{font-size:12px;font-weight:500;color:var(--text)}
+.shop-desc{font-size:10px;color:var(--text-dim)}
+.shop-stat{font-size:10px;color:var(--green)}
+.shop-price{font-size:12px;color:var(--amber);font-weight:500;white-space:nowrap}
+.shop-btn{padding:4px 10px;background:rgba(200,135,74,0.2);border:1px solid var(--amber-dim);border-radius:4px;color:var(--amber);font-size:11px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;flex-shrink:0}
+.shop-btn:hover{background:rgba(200,135,74,0.4);color:var(--gold)}
+.shop-btn:disabled{opacity:.4;cursor:not-allowed}
+.sell-item{display:flex;align-items:center;gap:7px;padding:7px 8px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:5px;margin-bottom:5px;transition:all .15s}
+.sell-item:hover{border-color:#4a7e4a;background:rgba(74,126,74,0.07)}
+.sell-btn{padding:3px 9px;background:rgba(74,158,106,0.2);border:1px solid #4a7e4a;border-radius:4px;color:#4a9e6a;font-size:11px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;flex-shrink:0}
+.sell-btn:hover{background:rgba(74,158,106,0.35);color:#7ade9a}
+.gold-display{display:inline-flex;align-items:center;gap:4px;background:rgba(200,168,74,0.15);border:1px solid var(--amber-dim);border-radius:20px;padding:3px 10px;font-size:12px;color:var(--amber);font-weight:500}
+.shop-tabs{display:flex;gap:4px;margin-bottom:10px}
+.st2{flex:1;padding:5px;background:transparent;border:1px solid var(--border);border-radius:4px;color:var(--text-mute);font-size:10px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;text-align:center;transition:all .15s}
+.st2.ac{background:rgba(200,135,74,0.12);border-color:var(--amber-dim);color:var(--amber)}
+
+/* 강화 UI */
+.forge-item{background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px;transition:all .15s}
+.forge-item.selected{border-color:#c8874a;background:rgba(200,135,74,0.08)}
+.forge-item:hover{border-color:var(--border2);cursor:pointer}
+.forge-header{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.forge-icon{font-size:24px}
+.forge-name{font-size:13px;font-weight:500;color:var(--text)}
+.forge-plus{font-family:'Cinzel',serif;font-size:13px;font-weight:700}
+.forge-stats{font-size:11px;color:var(--text-dim);margin-bottom:8px}
+.forge-cost{display:flex;align-items:center;justify-content:space-between;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
+.forge-btn{padding:6px 16px;background:linear-gradient(135deg,rgba(200,135,74,0.3),rgba(138,90,40,0.3));border:1px solid var(--amber-dim);border-radius:6px;color:var(--amber);font-size:12px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;font-weight:500;transition:all .15s}
+.forge-btn:hover{background:linear-gradient(135deg,rgba(200,135,74,0.5),rgba(138,90,40,0.5));color:var(--gold)}
+.forge-btn:disabled{opacity:.4;cursor:not-allowed}
+.forge-rate{font-size:10px;color:var(--text-mute)}
+/* 강화 등급 색상 */
+.plus-1{color:#a0c8e0}.plus-2{color:#80e080}.plus-3{color:#e0c040}.plus-4{color:#e08040}.plus-5{color:#e04040}
+.plus-max{color:#ff80ff;text-shadow:0 0 8px #ff80ff88}
+#chat-bottom{
+  flex-shrink:0;border-top:1px solid var(--border);
+  padding:7px 12px 8px;background:rgba(10,6,2,0.4);
+}
+.chat-log-small{height:60px;overflow-y:auto;font-size:11px;line-height:1.65;color:var(--text-dim);margin-bottom:5px}
+.chat-log-small::-webkit-scrollbar{width:2px}
+.chat-log-small::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.cl .cn{font-weight:500;color:var(--text)}
+.cl.sys{color:var(--text-mute);font-style:italic}
+.cl.heal{color:#4a9e6a}
+.cl.loot{color:var(--gold)}
+.chat-input-row{display:flex;gap:5px}
+.chat-input-row input{flex:1;background:rgba(10,6,2,0.6);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:6px 9px;font-size:11px;font-family:'Noto Sans KR',sans-serif;outline:none}
+.chat-input-row input::placeholder{color:var(--text-mute)}
+.chat-input-row button{background:rgba(138,90,40,0.25);border:1px solid var(--amber-dim);border-radius:4px;color:var(--amber);padding:6px 10px;font-size:11px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap}
+.chat-input-row button:hover{background:rgba(138,90,40,0.4);color:var(--gold)}
+</style>
+</head>
+<body>
+
+<div id="loading"><span class="spin">⚙</span><p>여관 준비 중...</p></div>
+
+<div id="login-screen">
+  <div class="lp">
+    <div class="is"><span class="ic">🍺</span><h1>황금 용 여관</h1><p>모험가들의 쉼터</p></div>
+    <div class="pf"><label>모험가 이름</label><input id="l-id" type="text" placeholder="아이디" autocomplete="username"/></div>
+    <div class="pf"><label>암호</label><input id="l-pw" type="password" placeholder="비밀번호" onkeydown="if(event.key==='Enter')doLogin()"/></div>
+    <div class="err" id="l-err"></div>
+    <button class="btn-inn" onclick="doLogin()">여관 입장</button>
+  </div>
+</div>
+
+<div id="game-wrap">
+  <div id="pub-container">
+    <canvas id="pub-canvas"></canvas>
+    <div id="ents"></div>
+    <div id="regen-notice">🏥 HP 회복 중...</div>
+    <div id="hp-hud">
+      <span id="hud-name" style="font-size:11px;color:var(--text-dim)"></span>
+      <div class="hb"><div class="hf" id="hf"></div></div>
+      <span id="hud-txt" style="font-size:11px"></span>
+    </div>
+  </div>
+
+  <div id="side-panel">
+    <div class="ptop">
+      <span class="iname">🍺 황금 용 여관</span>
+      <button class="btnb" onclick="goToDungeon()">⚔ 던전으로</button>
+    </div>
+
+    <!-- 5개 탭 -->
+    <div class="tabs3">
+      <button class="t3 ac" id="t3-st" onclick="swTab('st')">상태</button>
+      <button class="t3" id="t3-eq" onclick="swTab('eq')">장비</button>
+      <button class="t3" id="t3-iv" onclick="swTab('iv')">인벤토리</button>
+      <button class="t3" id="t3-sh" onclick="swTab('sh')">🛒상점</button>
+      <button class="t3" id="t3-fg" onclick="swTab('fg')">🔨강화</button>
+    </div>
+
+    <!-- 상태 탭 -->
+    <div class="tab-content active" id="tc-st"></div>
+    <!-- 장비 탭 -->
+    <div class="tab-content" id="tc-eq"></div>
+    <!-- 인벤토리 탭 -->
+    <div class="tab-content" id="tc-iv"></div>
+    <!-- 상점 탭 -->
+    <div class="tab-content" id="tc-sh"></div>
+    <!-- 강화 탭 -->
+    <div class="tab-content" id="tc-fg"></div>
+
+    <!-- 하단 고정 채팅 -->
+    <div id="chat-bottom">
+      <div class="chat-log-small" id="chat-log"></div>
+      <div class="chat-input-row">
+        <input id="ci" type="text" placeholder="대화..." maxlength="50" onkeydown="if(event.key==='Enter')sendChat()"/>
+        <button onclick="sendChat()">말하기</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script>
+const {createClient}=supabase;
+const db=createClient(SUPABASE_URL,SUPABASE_ANON);
+
+// ── 데이터 ────────────────────────────────────────
+const CLS_DATA={
+  전사:  {maxHp:120,atk:[12,20],body:'#4a7ec8',hair:'#3a2010',cloth:'#2a4a8a'},
+  마법사:{maxHp:80, atk:[22,38],body:'#8a4ac8',hair:'#1a0a2a',cloth:'#5a2a8a'},
+  궁수:  {maxHp:90, atk:[16,28],body:'#4a9e6a',hair:'#2a1a0a',cloth:'#2a6a4a'},
+  힐러:  {maxHp:100,atk:[8,14], body:'#c8a84a',hair:'#5a3a10',cloth:'#8a6a2a'},
+};
+const ITEMS={
+  '낡은 검':        {icon:'🗡️',type:'weapon',slot:'weapon',atk:5,  desc:'낡았지만 쓸 만하다',      rarity:'c'},
+  '강철 검':        {icon:'⚔️',type:'weapon',slot:'weapon',atk:12, desc:'단단한 강철로 만든 검',   rarity:'u'},
+  '마법 지팡이':    {icon:'🪄',type:'weapon',slot:'weapon',atk:18, desc:'마법 에너지가 깃들어 있다',rarity:'r'},
+  '용사의 활':      {icon:'🏹',type:'weapon',slot:'weapon',atk:15, desc:'멀리서도 강력하다',        rarity:'u'},
+  '성스러운 지팡이':{icon:'✨',type:'weapon',slot:'weapon',atk:10, desc:'치유의 힘이 깃들어 있다',  rarity:'u'},
+  '불꽃 검':        {icon:'🔥',type:'weapon',slot:'weapon',atk:22, desc:'화염이 깃든 전설의 검',    rarity:'e'},
+  '가죽 갑옷':      {icon:'🦺',type:'armor', slot:'armor', def:3,  desc:'가벼운 가죽 갑옷',         rarity:'c'},
+  '철 갑옷':        {icon:'🛡️',type:'armor', slot:'armor', def:7,  desc:'튼튼한 철 갑옷',          rarity:'u'},
+  '마법 로브':      {icon:'👘',type:'armor', slot:'armor', def:5,  desc:'마법사의 로브',            rarity:'u'},
+  '용의 비늘 갑옷': {icon:'🐉',type:'armor', slot:'armor', def:12, desc:'드래곤 비늘 갑옷',         rarity:'e'},
+  '작은 물약':      {icon:'🧪',type:'potion',hp:30,  desc:'HP 30 회복', rarity:'c'},
+  '큰 물약':        {icon:'⚗️',type:'potion',hp:80,  desc:'HP 80 회복', rarity:'u'},
+  '엘릭서':         {icon:'💎',type:'potion',hp:9999,desc:'HP 전체 회복',rarity:'r'},
+};
+const NC=['#e0b060','#a0c8e0','#b0e0a0','#e0a0c0','#c0a0e0','#e0c8a0'];
+const PW=1100,PH=700;
+const EXIT_X=PW-60,EXIT_Y=PH/2;
+
+// ── STATE ─────────────────────────────────────────
+let me=null,myPos={x:300,y:450},myTarget=null;
+let players={},bubTmr={},lastChatTs=0,torchT=0;
+let regenTmr=null,exitTransitioning=false;
+let activeTab='st';
+
+const canvas=document.getElementById('pub-canvas');
+const ctx=canvas.getContext('2d');
+const ents=document.getElementById('ents');
+
+function resize(){const c=document.getElementById('pub-container');canvas.width=c.clientWidth;canvas.height=c.clientHeight;}
+window.addEventListener('resize',resize);
+function nc(u){if(!u)return'#a07840';let h=0;for(const c of u)h=(h*31+c.charCodeAt(0))%NC.length;return NC[h];}
+
+// ── 스탯 계산 ─────────────────────────────────────
+function maxHp(){return(CLS_DATA[me.cls]?.maxHp||100)+(me.level-1)*10;}
+
+// 강화 데이터 (forgeBonus보다 먼저 선언)
+const FORGE_DATA=[
+  {level:0, cost:50,  rate:90, statBonus:3},
+  {level:1, cost:100, rate:80, statBonus:3},
+  {level:2, cost:180, rate:70, statBonus:4},
+  {level:3, cost:300, rate:55, statBonus:4},
+  {level:4, cost:500, rate:40, statBonus:5},
+  {level:5, cost:800, rate:30, statBonus:5},
+  {level:6, cost:1200,rate:20, statBonus:6},
+  {level:7, cost:2000,rate:15, statBonus:6},
+  {level:8, cost:3000,rate:10, statBonus:7},
+  {level:9, cost:5000,rate:7,  statBonus:8},
+];
+const MAX_FORGE=10;
+
+// 강화 보너스 계산
+function forgeBonus(fullName){
+  if(!fullName)return 0;
+  const m=fullName.match(/\+(\d+)$/);
+  if(!m)return 0;
+  const lv=parseInt(m[1]);
+  let bonus=0;
+  for(let i=0;i<lv&&i<FORGE_DATA.length;i++) bonus+=FORGE_DATA[i].statBonus;
+  return bonus;
+}
+
+function myAtk(){
+  const b=CLS_DATA[me.cls]?.atk||[10,18];
+  const wName=me.equipped?.weapon;
+  const wBase=wName?ITEMS[wName.replace(/ \+\d+$/,'')]:null;
+  const wb=(wBase?.atk||0)+forgeBonus(wName);
+  const lb=Math.floor((me.level-1)*1.5);
+  return[b[0]+wb+lb,b[1]+wb+lb];
+}
+function myDef(){
+  const aName=me.equipped?.armor;
+  const aBase=aName?ITEMS[aName.replace(/ \+\d+$/,'')]:null;
+  const ab=(aBase?.def||0)+forgeBonus(aName);
+  return ab+Math.floor((me.level-1)*0.8);
+}
+
+// ── 상점 데이터 ───────────────────────────────────
+const SHOP_ITEMS=[
+  {name:'강철 검',        price:120, sellPrice:40},
+  {name:'마법 지팡이',    price:280, sellPrice:90},
+  {name:'용사의 활',      price:200, sellPrice:65},
+  {name:'불꽃 검',        price:500, sellPrice:160},
+  {name:'성스러운 지팡이',price:180, sellPrice:58},
+  {name:'가죽 갑옷',      price:80,  sellPrice:25},
+  {name:'철 갑옷',        price:200, sellPrice:65},
+  {name:'마법 로브',      price:160, sellPrice:52},
+  {name:'용의 비늘 갑옷', price:600, sellPrice:195},
+  {name:'작은 물약',      price:30,  sellPrice:8},
+  {name:'큰 물약',        price:80,  sellPrice:22},
+  {name:'엘릭서',         price:300, sellPrice:95},
+];
+function getSellPrice(itemName){
+  const s=SHOP_ITEMS.find(x=>x.name===itemName);
+  if(s)return s.sellPrice;
+  const it=ITEMS[itemName];if(!it)return 5;
+  if(it.atk)return Math.floor(it.atk*3);
+  if(it.def)return Math.floor(it.def*5);
+  if(it.hp)return Math.floor((it.hp/10)*3);
+  return 5;
+}
+let shopMode='buy'; // 'buy' or 'sell'
+
+// ── 커서 관리 ─────────────────────────────────────
+const FINGER="url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Ctext y='28' font-size='26'%3E%F0%9F%91%86%3C/text%3E%3C/svg%3E\") 12 4, pointer";
+const FINGER_GOLD="url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 36 36'%3E%3Cfilter id='g'%3E%3CfeGaussianBlur stdDeviation='2' result='b'/%3E%3CfeMerge%3E%3CfeMergeNode in='b'/%3E%3CfeMergeNode in='SourceGraphic'/%3E%3C/feMerge%3E%3C/filter%3E%3Ctext y='30' font-size='26' filter='url(%23g)' fill='%23ffd700'%3E%F0%9F%91%86%3C/text%3E%3C/svg%3E\") 12 4, pointer";
+
+function setCur(type){canvas.style.cursor=type==='gold'?FINGER_GOLD:FINGER;}
+
+// 마우스 위치에 따라 커서 변경
+canvas.addEventListener('mousemove',e=>{
+  if(!me)return;
+  const r=canvas.getBoundingClientRect();
+  const cx=e.clientX-r.left,cy=e.clientY-r.top;
+  const px=(cx/canvas.width)*PW,py=(cy/canvas.height)*PH;
+  // 출구 근처
+  if(Math.abs(px-EXIT_X)<35&&Math.abs(py-EXIT_Y)<45){setCur('gold');return;}
+  setCur('default');
+});
+canvas.addEventListener('mouseleave',()=>setCur('default'));
+
+// ── 사람 SVG ─────────────────────────────────────
+function makeSVG(cls,isMe){
+  const cd=CLS_DATA[cls]||CLS_DATA['전사'];
+  const glow=isMe?`filter:drop-shadow(0 0 6px ${cd.body}88);`:'';
+  return`<svg class="char-svg" viewBox="0 0 36 48" style="${glow}">
+    <g class="body-g">
+      <g class="leg-l" style="transform-origin:18px 36px"><rect x="13" y="34" width="7" height="11" rx="3" fill="${cd.cloth}"/><rect x="13" y="42" width="8" height="4" rx="2" fill="#2a1a0a"/></g>
+      <g class="leg-r" style="transform-origin:18px 36px"><rect x="20" y="34" width="7" height="11" rx="3" fill="${cd.cloth}"/><rect x="20" y="42" width="8" height="4" rx="2" fill="#2a1a0a"/></g>
+      <rect x="11" y="20" width="14" height="16" rx="4" fill="${cd.cloth}"/>
+      <g class="arm-l" style="transform-origin:12px 22px"><rect x="6" y="20" width="6" height="10" rx="3" fill="${cd.body}"/><rect x="6" y="28" width="6" height="4" rx="2" fill="#d4a882"/></g>
+      <g class="arm-r" style="transform-origin:24px 22px"><rect x="24" y="20" width="6" height="10" rx="3" fill="${cd.body}"/><rect x="24" y="28" width="6" height="4" rx="2" fill="#d4a882"/></g>
+      <rect x="15" y="16" width="6" height="6" rx="2" fill="#d4a882"/>
+      <ellipse cx="18" cy="12" rx="9" ry="10" fill="#d4a882"/>
+      <ellipse cx="18" cy="5" rx="9" ry="5" fill="${cd.hair}"/>
+      <rect x="9" y="4" width="4" height="8" rx="2" fill="${cd.hair}"/>
+      <rect x="23" y="4" width="4" height="8" rx="2" fill="${cd.hair}"/>
+      <ellipse cx="14.5" cy="12" rx="2" ry="2.2" fill="white"/>
+      <ellipse cx="21.5" cy="12" rx="2" ry="2.2" fill="white"/>
+      <ellipse cx="14.8" cy="12.3" rx="1.2" ry="1.4" fill="#1a0a00"/>
+      <ellipse cx="21.8" cy="12.3" rx="1.2" ry="1.4" fill="#1a0a00"/>
+      <circle cx="15.3" cy="11.7" r="0.4" fill="white"/>
+      <circle cx="22.3" cy="11.7" r="0.4" fill="white"/>
+      <path d="M15.5 16.5 Q18 18 20.5 16.5" stroke="#a06040" stroke-width="1" fill="none"/>
+      ${isMe?`<text x="18" y="0" text-anchor="middle" font-size="7">⭐</text>`:''}
+    </g>
+  </svg>`;
+}
+
+// ── 맵 그리기 ─────────────────────────────────────
+function draw(){
+  torchT+=0.04;const W=canvas.width,H=canvas.height;
+  ctx.clearRect(0,0,W,H);
+  // 바닥
+  for(let r=0;r<15;r++)for(let c=0;c<20;c++){const x=c*(W/16)+(r%2)*(W/32),y=r*(H/12);ctx.fillStyle=(r+c)%3===0?'#1e1b12':(r+c)%3===1?'#171510':'#1c1a0f';ctx.fillRect(x,y,W/16-1,H/12-1);}
+  const wH=H*0.42;
+  // 뒷벽
+  for(let r=0;r<5;r++)for(let c=0;c<22;c++){const wx=c*(W/10)+(r%2)*(W/20),wy=r*(wH/4);ctx.fillStyle=r%2===0?(c%2===0?'#252118':'#1e1b14'):(c%2===0?'#1e1b14':'#252118');ctx.fillRect(wx+1,wy+1,W/10-2,wH/4-2);}
+  const ws=ctx.createLinearGradient(0,wH-20,0,wH+20);ws.addColorStop(0,'rgba(0,0,0,0.55)');ws.addColorStop(1,'transparent');ctx.fillStyle=ws;ctx.fillRect(0,wH-20,W,40);
+  // 횃불
+  [[W*0.15,wH-28],[W*0.5,wH-28],[W*0.82,wH-28]].forEach(([tx,ty])=>{
+    const fl=0.68+Math.sin(torchT*3.5+tx)*0.32;
+    const g=ctx.createRadialGradient(tx,ty,4,tx,ty,100);g.addColorStop(0,`rgba(255,140,20,${0.25*fl})`);g.addColorStop(1,'transparent');ctx.fillStyle=g;ctx.fillRect(tx-100,ty-100,200,200);
+    ctx.fillStyle='#3a2a10';ctx.fillRect(tx-5,ty-8,10,18);ctx.fillRect(tx-10,ty-10,20,6);
+    ctx.fillStyle=`rgba(255,${90+Math.floor(fl*80)},15,${fl})`;ctx.beginPath();ctx.ellipse(tx,ty-14,6,11,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=`rgba(255,220,80,${fl*0.85})`;ctx.beginPath();ctx.ellipse(tx+Math.sin(torchT*4+tx)*1.5,ty-18,3,6,0,0,Math.PI*2);ctx.fill();
+  });
+  // 벽난로
+  const fpX=W*0.15,fpY=wH,fpW=W*0.12,fpH=H*0.25,ff=0.65+Math.sin(torchT*2.5)*0.35;
+  const fg=ctx.createRadialGradient(fpX,fpY,8,fpX,fpY,140);fg.addColorStop(0,`rgba(255,110,20,${0.2*ff})`);fg.addColorStop(1,'transparent');ctx.fillStyle=fg;ctx.fillRect(fpX-140,fpY-100,280,200);
+  ctx.fillStyle='#2a2520';ctx.fillRect(fpX-fpW/2-12,fpY-fpH+8,fpW+24,fpH+10);ctx.fillStyle='#3a3028';ctx.fillRect(fpX-fpW/2-20,fpY-fpH-2,fpW+40,14);ctx.fillStyle='#0a0806';ctx.fillRect(fpX-fpW/2,fpY-fpH+20,fpW,fpH-16);
+  for(let i=0;i<5;i++){const fx=fpX-fpW/2+8+i*(fpW-6)/4,fh=15+Math.sin(torchT*3+i*1.1)*12,fa=0.65+Math.sin(torchT*4.5+i)*0.35;ctx.fillStyle=`rgba(255,${55+i*18},10,${fa*0.9})`;ctx.beginPath();ctx.ellipse(fx,fpY-20,6,fh,0,0,Math.PI*2);ctx.fill();}
+  // 바
+  const bY=H*0.47;ctx.fillStyle='#3a2010';ctx.fillRect(W*0.55,bY,W*0.19,H*0.065);ctx.fillStyle='#6a4020';ctx.fillRect(W*0.55,bY,W*0.19,H*0.016);ctx.strokeStyle='#2a1608';ctx.lineWidth=2;ctx.strokeRect(W*0.55,bY,W*0.19,H*0.065);ctx.fillStyle='rgba(200,168,74,0.85)';ctx.font=`bold ${Math.round(11*W/PW)}px Cinzel,serif`;ctx.textAlign='center';ctx.fillText('🍺 주문',W*0.645,bY+H*0.042);
+  // 테이블
+  [[W*0.17,H*0.58],[W*0.41,H*0.62],[W*0.17,H*0.80],[W*0.41,H*0.81]].forEach(([tx,ty])=>{const tw=W*0.135,th=H*0.07;ctx.fillStyle='rgba(0,0,0,0.3)';ctx.fillRect(tx-tw/2+4,ty+th/2+3,tw,7);ctx.fillStyle='#5a3a18';ctx.fillRect(tx-tw/2,ty-th/2,tw,th);ctx.fillStyle='#7a5028';ctx.fillRect(tx-tw/2,ty-th/2,tw,th*0.28);ctx.strokeStyle='#3a2010';ctx.lineWidth=1.5;ctx.strokeRect(tx-tw/2,ty-th/2,tw,th);ctx.fillStyle='rgba(200,168,74,0.75)';ctx.beginPath();ctx.arc(tx+tw*0.14,ty,tw*0.06,0,Math.PI*2);ctx.fill();});
+  // 러그
+  ctx.fillStyle='rgba(110,35,18,0.2)';ctx.beginPath();ctx.ellipse(W*0.37,H*0.71,W*0.2,H*0.1,0,0,Math.PI*2);ctx.fill();
+
+  // ── 상인 NPC ──────────────────────────────────
+  const mX=W*0.72,mY=H*0.62;
+  // 상인 광원
+  const mg=ctx.createRadialGradient(mX,mY,5,mX,mY,70);
+  mg.addColorStop(0,'rgba(200,168,74,0.15)');mg.addColorStop(1,'transparent');
+  ctx.fillStyle=mg;ctx.fillRect(mX-70,mY-70,140,140);
+  // 상인 몸통
+  ctx.fillStyle='#5a3a10';ctx.fillRect(mX-12,mY-28,24,28); // 옷
+  ctx.fillStyle='#8a5a20';ctx.fillRect(mX-10,mY-26,20,4);  // 어깨
+  // 상인 머리
+  ctx.fillStyle='#d4a882';ctx.beginPath();ctx.arc(mX,mY-36,12,0,Math.PI*2);ctx.fill();
+  // 모자
+  ctx.fillStyle='#3a2010';ctx.fillRect(mX-14,mY-46,28,6);
+  ctx.fillRect(mX-9,mY-58,18,14);
+  // 눈
+  ctx.fillStyle='#1a0a00';ctx.fillRect(mX-5,mY-38,3,3);ctx.fillRect(mX+2,mY-38,3,3);
+  // 수염
+  ctx.fillStyle='#c8a060';ctx.fillRect(mX-5,mY-32,10,5);
+  // 팔/상품 진열대
+  ctx.fillStyle='#5a3a18';ctx.fillRect(mX-22,mY-5,44,10);
+  ctx.strokeStyle='#3a2010';ctx.lineWidth=1;ctx.strokeRect(mX-22,mY-5,44,10);
+  // 진열 아이템
+  ctx.font='12px sans-serif';ctx.textAlign='center';
+  ctx.fillText('⚔️',mX-14,mY+8);
+  ctx.fillText('🛡️',mX,mY+8);
+  ctx.fillText('🧪',mX+14,mY+8);
+  // 말풍선 (상점 탭 클릭 유도)
+  ctx.save();ctx.fillStyle='rgba(20,14,8,0.88)';
+  const bx=mX,by=mY-65;
+  ctx.beginPath();if(ctx.roundRect)ctx.roundRect(bx-36,by-10,72,20,5);else ctx.rect(bx-36,by-10,72,20);
+  ctx.fill();ctx.strokeStyle='#c9a84c';ctx.lineWidth=1;
+  ctx.beginPath();if(ctx.roundRect)ctx.roundRect(bx-36,by-10,72,20,5);else ctx.rect(bx-36,by-10,72,20);
+  ctx.stroke();
+  ctx.fillStyle='#e8d0a0';ctx.font='10px Noto Sans KR,sans-serif';ctx.textAlign='center';
+  ctx.fillText('🛒 거래하기',bx,by+5);
+  ctx.restore();
+
+  // ── 대장장이 NPC ────────────────────────────────
+  const fsX=W*0.86,fsY=H*0.60;
+  // 불꽃 광원
+  const fg2=ctx.createRadialGradient(fsX,fsY,5,fsX,fsY,80);
+  fg2.addColorStop(0,`rgba(255,100,20,${0.18+Math.sin(torchT*3)*0.08})`);fg2.addColorStop(1,'transparent');
+  ctx.fillStyle=fg2;ctx.fillRect(fsX-80,fsY-80,160,160);
+  // 모루
+  ctx.fillStyle='#444';ctx.fillRect(fsX-16,fsY-2,32,10);
+  ctx.fillRect(fsX-10,fsY+8,20,14);
+  ctx.fillStyle='#606060';ctx.fillRect(fsX-14,fsY-4,28,5);
+  // 불꽃 (모루 위)
+  const bff=0.6+Math.sin(torchT*5)*0.4;
+  ctx.fillStyle=`rgba(255,${80+Math.floor(bff*60)},10,${bff*0.8})`;
+  ctx.beginPath();ctx.ellipse(fsX-8,fsY-6,4,7,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle=`rgba(255,200,60,${bff*0.7})`;
+  ctx.beginPath();ctx.ellipse(fsX-8,fsY-9,2,4,0,0,Math.PI*2);ctx.fill();
+  // 망치 (애니메이션)
+  ctx.save();ctx.translate(fsX+12,fsY-24);ctx.rotate(Math.sin(torchT*4)*0.35-0.3);
+  ctx.fillStyle='#7a5030';ctx.fillRect(-2,-16,4,20);
+  ctx.fillStyle='#606060';ctx.fillRect(-7,-20,14,8);
+  ctx.restore();
+  // 몸통
+  ctx.fillStyle='#4a2808';ctx.fillRect(fsX-14,fsY-34,28,32);
+  ctx.fillStyle='#2a1604';ctx.fillRect(fsX-12,fsY-30,24,27); // 앞치마
+  // 머리
+  ctx.fillStyle='#b48060';ctx.beginPath();ctx.arc(fsX,fsY-46,13,0,Math.PI*2);ctx.fill();
+  // 철모
+  ctx.fillStyle='#505050';ctx.beginPath();ctx.arc(fsX,fsY-50,11,Math.PI,0);ctx.fill();
+  ctx.fillRect(fsX-13,fsY-52,26,6);
+  // 눈
+  ctx.fillStyle='#1a0a00';ctx.fillRect(fsX-5,fsY-48,3,3);ctx.fillRect(fsX+2,fsY-48,3,3);
+  // 굵은 수염
+  ctx.fillStyle='#7a5030';ctx.fillRect(fsX-7,fsY-40,14,8);
+  // 말풍선
+  ctx.save();ctx.fillStyle='rgba(20,14,8,0.88)';
+  ctx.beginPath();if(ctx.roundRect)ctx.roundRect(fsX-36,fsY-74,72,20,5);else ctx.rect(fsX-36,fsY-74,72,20);
+  ctx.fill();ctx.strokeStyle='#c87040';ctx.lineWidth=1;
+  ctx.beginPath();if(ctx.roundRect)ctx.roundRect(fsX-36,fsY-74,72,20,5);else ctx.rect(fsX-36,fsY-74,72,20);
+  ctx.stroke();ctx.fillStyle='#e8c090';ctx.font='10px Noto Sans KR,sans-serif';ctx.textAlign='center';
+  ctx.fillText('🔨 강화하기',fsX,fsY-59);ctx.restore();
+
+  // 출구 그리기
+  drawExit(W,H,wH);
+}
+
+function drawExit(W,H,wH){
+  const sx=(EXIT_X/PW)*W-(25/PW)*W;
+  const sy=(EXIT_Y/PH)*H-(40/PH)*H;
+  const sw=(50/PW)*W, sh=(80/PH)*H;
+  const fl=0.7+Math.sin(torchT*2.2)*0.3;
+  // 마우스 근처인지 체크
+  const near=me&&Math.abs(myPos.x-EXIT_X)<80&&Math.abs(myPos.y-EXIT_Y)<80;
+  // 광원
+  const g=ctx.createRadialGradient(sx+sw/2,sy+sh/2,5,sx+sw/2,sy+sh/2,near?120:90);
+  g.addColorStop(0,`rgba(255,${near?200:180},${near?80:60},${(near?0.28:0.18)*fl})`);
+  g.addColorStop(1,'transparent');
+  ctx.fillStyle=g;ctx.fillRect(sx-60,sy-40,sw+120,sh+80);
+  // 문틀
+  ctx.fillStyle='#2a1a0a';ctx.fillRect(sx-4,sy-4,sw+8,sh+4);
+  const dg=ctx.createLinearGradient(sx,sy,sx,sy+sh);
+  dg.addColorStop(0,`rgba(255,180,80,${0.8*fl})`);dg.addColorStop(1,`rgba(180,100,30,${0.5*fl})`);
+  ctx.fillStyle=dg;ctx.fillRect(sx,sy,sw,sh);
+  ctx.fillStyle='#2a1a0a';ctx.beginPath();ctx.arc(sx+sw/2,sy,sw/2+4,Math.PI,0);ctx.fill();
+  const ag=ctx.createRadialGradient(sx+sw/2,sy,2,sx+sw/2,sy,sw/2);
+  ag.addColorStop(0,`rgba(255,200,100,${0.9*fl})`);ag.addColorStop(1,`rgba(180,100,30,${0.3*fl})`);
+  ctx.fillStyle=ag;ctx.beginPath();ctx.arc(sx+sw/2,sy,sw/2,Math.PI,0);ctx.fill();
+  ctx.fillStyle='#c9a84c';ctx.beginPath();ctx.arc(sx+8,sy+sh*0.5,4,0,Math.PI*2);ctx.fill();
+  // 골든 테두리 (근처일 때)
+  if(near){
+    ctx.save();ctx.strokeStyle=`rgba(255,215,0,${0.7+Math.sin(torchT*5)*0.3})`;ctx.lineWidth=2.5;
+    ctx.shadowColor='#ffd700';ctx.shadowBlur=10;
+    ctx.strokeRect(sx-2,sy-2,sw+4,sh+4);ctx.restore();
+  }
+  // 안내 표시
+  ctx.save();ctx.globalAlpha=near?0.95:0.8;
+  ctx.fillStyle='rgba(10,6,2,0.9)';
+  ctx.beginPath();if(ctx.roundRect)ctx.roundRect(sx+sw/2-38,sy-30,76,20,5);else ctx.rect(sx+sw/2-38,sy-30,76,20);ctx.fill();
+  ctx.strokeStyle=near?'#ffd700':'#c9a84c';ctx.lineWidth=1;
+  ctx.beginPath();if(ctx.roundRect)ctx.roundRect(sx+sw/2-38,sy-30,76,20,5);else ctx.rect(sx+sw/2-38,sy-30,76,20);ctx.stroke();
+  ctx.fillStyle=near?'#ffd700':'#e8d0a0';ctx.font='10px Noto Sans KR,sans-serif';ctx.textAlign='center';
+  ctx.fillText('🚪 던전 출구',sx+sw/2,sy-15);ctx.restore();
+}
+
+// ── 캐릭터 DOM ─────────────────────────────────────
+function getOrCreate(id,data){
+  let el=document.getElementById('c-'+id);
+  if(!el){
+    el=document.createElement('div');el.id='c-'+id;el.className='character';
+    const isMe=(id===me?.id);
+    el.innerHTML=makeSVG(data.cls||'전사',isMe)+
+      `<div class="char-shadow"></div>
+       <div class="clbl" style="color:${nc(data.username)}">${data.username}${isMe?' ⭐':''}</div>`;
+    ents.appendChild(el);
+  }
+  return el;
+}
+function placeChar(id,data){
+  const el=getOrCreate(id,data);
+  const sx=(data.x/PW)*canvas.width,sy=(data.y/PH)*canvas.height;
+  el.style.left=sx+'px';el.style.top=sy+'px';el.style.transform='translate(-50%,-70%)';
+}
+function removeChar(id){const el=document.getElementById('c-'+id);if(el)el.remove();}
+function showBubble(id,text){
+  const el=document.getElementById('c-'+id);if(!el)return;
+  let b=el.querySelector('.cbub');
+  if(!b){b=document.createElement('div');b.className='cbub';el.insertBefore(b,el.querySelector('.char-svg'));}
+  b.textContent=text;
+  clearTimeout(bubTmr[id]);
+  bubTmr[id]=setTimeout(()=>{if(b.parentNode)b.remove();},5000);
+}
+
+// ── 클릭 이동 ─────────────────────────────────────
+canvas.addEventListener('click',e=>{
+  if(!me||exitTransitioning)return;
+  const r=canvas.getBoundingClientRect();
+  const cx=e.clientX-r.left,cy=e.clientY-r.top;
+  const px=(cx/canvas.width)*PW,py=(cy/canvas.height)*PH;
+  if(py<PH*0.44+30)return;
+  myTarget={x:Math.max(20,Math.min(PW-20,px)),y:Math.max(PH*0.44+30,Math.min(PH-20,py))};
+  const rip=document.createElement('div');rip.className='ripple';rip.style.left=cx+'px';rip.style.top=cy+'px';
+  ents.appendChild(rip);setTimeout(()=>rip.remove(),520);
+});
+
+// ── 메인 루프 ─────────────────────────────────────
+function loop(){
+  let moving=false;
+  if(myTarget&&!exitTransitioning){
+    const dx=myTarget.x-myPos.x,dy=myTarget.y-myPos.y,d=Math.sqrt(dx*dx+dy*dy);
+    if(d>3.5){myPos.x+=dx/d*3.5;myPos.y+=dy/d*3.5;moving=true;}
+    else{myPos.x=myTarget.x;myPos.y=myTarget.y;myTarget=null;}
+  }
+  draw();
+  const all={...players};if(me)all[me.id]={...me,x:myPos.x,y:myPos.y};
+  for(const[id,d]of Object.entries(all))placeChar(id,d);
+  const myEl=document.getElementById('c-'+me?.id);if(myEl)myEl.classList.toggle('walking',moving);
+  checkExit();
+  requestAnimationFrame(loop);
+}
+
+function checkExit(){
+  if(!me||exitTransitioning)return;
+  const d=Math.sqrt((myPos.x-EXIT_X)**2+(myPos.y-EXIT_Y)**2);
+  if(d<38){exitTransitioning=true;myTarget=null;addChatLine('sy','⚔️ 던전으로 나갑니다...');saveProfile();setTimeout(()=>window.location.href='index.html',700);}
+}
+
+// ── HP 회복 ───────────────────────────────────────
+function updateHpHud(){
+  if(!me)return;
+  const mh=maxHp();
+  const pct=Math.max(0,(me.hp/mh)*100);
+  document.getElementById('hud-name').textContent=me.username;
+  document.getElementById('hf').style.width=pct+'%';
+  document.getElementById('hf').style.background=pct>50?'#4a9e6a':pct>25?'#c8874a':'#c84a4a';
+  document.getElementById('hud-txt').textContent=`${me.hp}/${mh}`;
+}
+function startRegen(){
+  document.getElementById('regen-notice').style.display='block';
+  regenTmr=setInterval(async()=>{
+    if(!me)return;const mh=maxHp();
+    if(me.hp>=mh)return;
+    me.hp=Math.min(mh,me.hp+5);
+    updateHpHud();
+    if(activeTab==='st')renderSt(); // 상태창 실시간 업데이트
+    await db.from('profiles').update({hp:me.hp}).eq('id',me.id);
+    addChatLine('heal',`🏥 HP +5 회복 (${me.hp}/${mh})`);
+  },5000);
+}
+
+// ── 탭 전환 ───────────────────────────────────────
+function swTab(name){
+  activeTab=name;
+  document.querySelectorAll('.t3').forEach(t=>t.classList.remove('ac'));
+  document.getElementById('t3-'+name).classList.add('ac');
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tc-'+name).classList.add('active');
+  if(name==='st')renderSt();
+  else if(name==='eq')renderEq();
+  else if(name==='iv')renderIv();
+  else if(name==='sh')renderSh();
+  else if(name==='fg')renderFg();
+}
+
+function renderSt(){
+  const mh=maxHp(),p=Math.max(0,(me.hp/mh)*100);
+  const hc=p>50?'#4a9e6a':p>25?'#c8874a':'#c84a4a';
+  const en=me.level*100,ep=Math.max(0,((me.exp||0)/en)*100);
+  const ar=myAtk(),def=myDef();
+  const cd=CLS_DATA[me.cls]||CLS_DATA['전사'];
+  document.getElementById('tc-st').innerHTML=`
+    <div class="stat-hero">
+      <div style="font-size:24px">🧙</div>
+      <div><div style="font-size:13px;font-weight:500">${me.username}</div><div style="font-size:11px;color:var(--text-dim)">${me.cls}</div></div>
+      <div class="stat-lv">Lv.${me.level}</div>
+    </div>
+    <div>
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:3px">HP ${me.hp} / ${mh}</div>
+      <div class="hp-track"><div class="hp-fill-s" style="width:${p}%;background:${hc}"></div></div>
+      <div style="font-size:10px;color:var(--text-mute);margin-top:5px;margin-bottom:2px">경험치 ${me.exp||0} / ${en}</div>
+      <div class="exp-track"><div class="exp-fill-s" style="width:${ep}%"></div></div>
+    </div>
+    <div class="stat-grid">
+      <div class="stat-box">공격력<b>${ar[0]}~${ar[1]}</b></div>
+      <div class="stat-box">방어력<b>${def}</b></div>
+      <div class="stat-box">💰 골드<b style="color:var(--amber)">${me.gold||0}G</b></div>
+      <div class="stat-box">💀 킬<b>${me.kills||0}</b></div>
+    </div>
+    <div style="font-size:11px;color:var(--text-mute);line-height:2">
+      무기: <span style="color:var(--amber)">${me.equipped?.weapon||'없음'}</span><br>
+      갑옷: <span style="color:var(--amber)">${me.equipped?.armor||'없음'}</span>
+    </div>`;
+}
+
+function renderEq(){
+  const eq=me.equipped||{};
+  const slots=[['weapon','⚔️ 무기'],['armor','🛡️ 갑옷']];
+  let h='<div class="eq-grid">';
+  slots.forEach(([s,lbl])=>{
+    const nm=eq[s],it=nm?ITEMS[nm]:null;
+    if(it){const st=it.atk?`공격 +${it.atk}`:it.def?`방어 +${it.def}`:'';
+      h+=`<div class="eq-slot has" onclick="innUnequip('${s}')"><div class="eq-lbl">${lbl}</div><div class="eq-icon">${it.icon}</div><div class="eq-name">${nm}</div><div class="eq-stat">${st}</div></div>`;
+    } else {
+      h+=`<div class="eq-slot"><div class="eq-lbl">${lbl}</div><div style="font-size:20px;opacity:.3;margin:4px 0">○</div><div style="font-size:10px;color:var(--text-mute)">비어있음</div></div>`;
+    }
+  });
+  h+='</div><div style="font-size:10px;color:var(--text-mute);margin-top:6px">클릭 → 장착 해제</div>';
+  document.getElementById('tc-eq').innerHTML=h;
+}
+
+function innUnequip(slot){
+  const eq=me.equipped||{};const nm=eq[slot];if(!nm)return;
+  const inv=me.inventory||[];
+  if(inv.length>=20)return;
+  inv.push({name:nm,id:Date.now()});delete eq[slot];
+  me.equipped=eq;me.inventory=inv;
+  saveProfile();renderEq();renderIv();
+  addChatLine('sys',`${nm} 장착 해제`);
+}
+
+function renderIv(){
+  const inv=me.inventory||[];
+  const rarMap={c:'',u:'ru',r:'rc',e:'re'};  // 희귀도 클래스 간단화
+  let h=`<div style="font-size:11px;color:var(--text-dim);margin-bottom:6px">${inv.length}/20 칸 사용 중</div><div class="inv-grid">`;
+  for(let i=0;i<20;i++){
+    const item=inv[i];
+    if(item){const def=ITEMS[item.name]||{icon:'📦',rarity:'c'};const rc=rarMap[def.rarity]||'';
+      h+=`<div class="inv-cell ${rc}" onclick="innUseItem(${i})" title="${item.name}"><div class="inv-icon">${def.icon}</div><div class="inv-name">${item.name}</div></div>`;
+    } else h+=`<div class="inv-cell empty"></div>`;
+  }
+  h+='</div><div style="font-size:10px;color:var(--text-mute);margin-top:6px">무기/갑옷: 장착 · 물약: 사용</div>';
+  document.getElementById('tc-iv').innerHTML=h;
+}
+
+function innUseItem(idx){
+  const inv=me.inventory||[];const item=inv[idx];if(!item)return;
+  const def=ITEMS[item.name];if(!def)return;
+  if(def.type==='potion'){
+    const mh=maxHp();const healed=Math.min(def.hp||0,mh-me.hp);
+    me.hp=Math.min(mh,me.hp+(def.hp||0));
+    inv.splice(idx,1);me.inventory=inv;
+    updateHpHud();saveProfile();renderIv();
+    addChatLine('heal',`🧪 ${item.name} 사용! HP +${healed}`);
+  } else if(def.slot){
+    const eq=me.equipped||{};
+    if(eq[def.slot])inv.push({name:eq[def.slot],id:Date.now()});
+    eq[def.slot]=item.name;inv.splice(idx,1);
+    me.equipped=eq;me.inventory=inv;
+    saveProfile();renderEq();renderIv();
+    addChatLine('sys',`🗡️ ${item.name} 장착!`);
+  }
+}
+
+// ── 상점 ──────────────────────────────────────────
+function renderSh(){
+  const el=document.getElementById('tc-sh');if(!el)return;
+  const gold=me.gold||0;
+  let h=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border)">
+      <div style="font-size:12px;font-weight:500">🧙 상인 가르시아</div>
+      <div class="gold-display">💰 ${gold}G</div>
+    </div>
+    <div class="shop-tabs">
+      <button class="st2${shopMode==='buy'?' ac':''}" onclick="setShopMode('buy')">🛒 구매</button>
+      <button class="st2${shopMode==='sell'?' ac':''}" onclick="setShopMode('sell')">💰 판매</button>
+    </div>`;
+
+  if(shopMode==='buy'){
+    h+=`<div style="font-size:10px;color:var(--text-mute);margin-bottom:8px">상인의 재고</div>`;
+    SHOP_ITEMS.forEach((s,i)=>{
+      const it=ITEMS[s.name];if(!it)return;
+      const stat=it.atk?`⚔️+${it.atk}`:it.def?`🛡️+${it.def}`:it.hp?`💊+${it.hp>=9999?'전체':it.hp}`:'';
+      const canBuy=gold>=s.price;
+      h+=`<div class="shop-item">
+        <div class="shop-icon">${it.icon}</div>
+        <div class="shop-info">
+          <div class="shop-name">${s.name}</div>
+          <div class="shop-stat">${stat}</div>
+          <div class="shop-desc">${it.desc}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+          <div class="shop-price">💰${s.price}G</div>
+          <button class="shop-btn" onclick="buyItem(${i})" ${canBuy?'':'disabled'}>구매</button>
+        </div>
+      </div>`;
+    });
+  } else {
+    const inv=me.inventory||[];
+    if(inv.length===0){
+      h+=`<div style="text-align:center;padding:2rem;color:var(--text-mute);font-size:12px">판매할 아이템이 없습니다</div>`;
+    } else {
+      h+=`<div style="font-size:10px;color:var(--text-mute);margin-bottom:8px">인벤토리 아이템을 판매하세요</div>`;
+      inv.forEach((item,idx)=>{
+        const it=ITEMS[item.name]||{icon:'📦',desc:''};
+        const sp=getSellPrice(item.name);
+        const stat=it.atk?`⚔️+${it.atk}`:it.def?`🛡️+${it.def}`:it.hp?`💊+${it.hp>=9999?'전체':it.hp}`:'';
+        h+=`<div class="sell-item">
+          <div style="font-size:18px">${it.icon}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;font-weight:500;color:var(--text)">${item.name}</div>
+            <div style="font-size:10px;color:var(--green)">${stat}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+            <div style="font-size:11px;color:var(--amber)">💰${sp}G</div>
+            <button class="sell-btn" onclick="sellItem(${idx})">판매</button>
+          </div>
+        </div>`;
+      });
+    }
+  }
+  el.innerHTML=h;
+}
+
+function setShopMode(mode){
+  shopMode=mode;
+  renderSh();
+}
+
+function buyItem(shopIdx){
+  const s=SHOP_ITEMS[shopIdx];if(!s)return;
+  const inv=me.inventory||[];
+  if(inv.length>=20){
+    addChatLine('sys','⚠️ 인벤토리가 가득 찼습니다! 아이템을 판매하세요.');
+    return;
+  }
+  if((me.gold||0)<s.price){
+    addChatLine('sys','💰 금화가 부족합니다!');
+    return;
+  }
+  me.gold=(me.gold||0)-s.price;
+  inv.push({name:s.name,id:Date.now()});
+  me.inventory=inv;
+  saveProfile();
+  renderSh();
+  addChatLine('loot',`🛒 ${ITEMS[s.name]?.icon||''} ${s.name} 구매! (-${s.price}G) 잔액: ${me.gold}G`);
+}
+
+function sellItem(invIdx){
+  const inv=me.inventory||[];const item=inv[invIdx];if(!item)return;
+  const sp=getSellPrice(item.name);
+  me.gold=(me.gold||0)+sp;
+  inv.splice(invIdx,1);
+  me.inventory=inv;
+  saveProfile();
+  renderSh();
+  addChatLine('loot',`💰 ${item.name} 판매! (+${sp}G) 잔액: ${me.gold}G`);
+}
+
+// ── 강화 시스템 ───────────────────────────────────
+// 아이템 이름에서 강화 수치와 기본 이름 분리
+function parseItemName(fullName){
+  const m=fullName.match(/^(.+?) \+(\d+)$/);
+  if(m)return{baseName:m[1],level:parseInt(m[2])};
+  return{baseName:fullName,level:0};
+}
+function makeItemName(baseName,level){
+  return level>0?`${baseName} +${level}`:baseName;
+}
+
+// 강화 가능한 아이템 목록 (인벤토리 + 장비창)
+function getForgeableItems(){
+  const result=[];
+  const inv=me.inventory||[];
+  inv.forEach((item,idx)=>{
+    const{baseName,level}=parseItemName(item.name);
+    const def=ITEMS[baseName];
+    if(def&&(def.type==='weapon'||def.type==='armor')&&level<MAX_FORGE){
+      result.push({item,idx,baseName,level,location:'inv'});
+    }
+  });
+  // 장비창 아이템
+  const eq=me.equipped||{};
+  Object.entries(eq).forEach(([slot,fullName])=>{
+    const{baseName,level}=parseItemName(fullName);
+    const def=ITEMS[baseName];
+    if(def&&(def.type==='weapon'||def.type==='armor')&&level<MAX_FORGE){
+      result.push({item:{name:fullName},idx:slot,baseName,level,location:'equip',slot});
+    }
+  });
+  return result;
+}
+
+function plusColor(level){
+  if(level>=10)return 'plus-max';
+  if(level>=5)return 'plus-5';
+  if(level>=4)return 'plus-4';
+  if(level>=3)return 'plus-3';
+  if(level>=2)return 'plus-2';
+  if(level>=1)return 'plus-1';
+  return '';
+}
+
+function renderFg(){
+  const el=document.getElementById('tc-fg');if(!el)return;
+  const gold=me.gold||0;
+  const items=getForgeableItems();
+
+  let h=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border)">
+      <div style="font-size:12px;font-weight:500">🔨 대장장이 보르그</div>
+      <div class="gold-display">💰 ${gold}G</div>
+    </div>
+    <div style="font-size:10px;color:var(--text-mute);margin-bottom:10px;line-height:1.7">
+      강화 실패 시 아이템은 유지되며<br>강화 수치만 1 감소합니다
+    </div>`;
+
+  if(items.length===0){
+    h+=`<div style="text-align:center;padding:2rem;color:var(--text-mute);font-size:12px">
+      강화 가능한 무기/방어구가 없습니다<br>
+      <span style="font-size:10px">인벤토리나 장비창의 무기·갑옷을 강화할 수 있어요</span>
+    </div>`;
+  } else {
+    items.forEach((entry,i)=>{
+      const def=ITEMS[entry.baseName]||{};
+      const fd=FORGE_DATA[entry.level]||FORGE_DATA[FORGE_DATA.length-1];
+      const canAfford=gold>=fd.cost;
+      const locLabel=entry.location==='equip'?'<span style="font-size:9px;background:rgba(74,126,200,0.2);color:#7ab0e0;border:1px solid #4a7ec8;border-radius:3px;padding:1px 5px;margin-left:4px">장착중</span>':'';
+      // 현재 스탯 계산
+      const baseAtk=def.atk||0, baseDef=def.def||0;
+      const curAtk=baseAtk+(entry.level*3+(entry.level>=3?(entry.level-2):0));
+      const curDef=baseDef+(entry.level*3+(entry.level>=3?(entry.level-2):0));
+      const nextAtk=curAtk+fd.statBonus, nextDef=curDef+fd.statBonus;
+      const statNow=def.atk?`공격력 ${curAtk}`:def.def?`방어력 ${curDef}`:'';
+      const statNext=def.atk?`→ ${nextAtk}`:def.def?`→ ${nextDef}`:'';
+      const plusCls=plusColor(entry.level);
+      const nextPlusCls=plusColor(entry.level+1);
+
+      h+=`<div class="forge-item">
+        <div class="forge-header">
+          <div class="forge-icon">${def.icon||'📦'}</div>
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:4px">
+              <span class="forge-name">${entry.baseName}</span>
+              ${entry.level>0?`<span class="forge-plus ${plusCls}">+${entry.level}</span>`:''}
+              ${locLabel}
+            </div>
+            <div class="forge-stats">${statNow} <span style="color:var(--green)">${statNext}</span></div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:10px;margin-bottom:8px">
+          <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:4px;padding:5px;text-align:center">
+            <div style="color:var(--text-mute)">비용</div>
+            <div style="color:var(--amber);font-weight:500">${fd.cost}G</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:4px;padding:5px;text-align:center">
+            <div style="color:var(--text-mute)">성공률</div>
+            <div style="color:${fd.rate>=70?'#4a9e6a':fd.rate>=40?'#c8874a':'#c84a4a'};font-weight:500">${fd.rate}%</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:4px;padding:5px;text-align:center">
+            <div style="color:var(--text-mute)">목표</div>
+            <div class="forge-plus ${nextPlusCls}" style="font-weight:700">+${entry.level+1}</div>
+          </div>
+        </div>
+        <button class="forge-btn" onclick="forgeItem(${i})" ${canAfford?'':'disabled'}>
+          ${canAfford?`🔨 강화 (+${entry.level}→+${entry.level+1})`:'💰 금화 부족'}
+        </button>
+      </div>`;
+    });
+  }
+  el.innerHTML=h;
+}
+
+function forgeItem(entryIdx){
+  const items=getForgeableItems();
+  const entry=items[entryIdx];if(!entry)return;
+  const fd=FORGE_DATA[entry.level];if(!fd)return;
+  if((me.gold||0)<fd.cost){addChatLine('sys','💰 금화가 부족합니다!');return;}
+
+  me.gold=(me.gold||0)-fd.cost;
+  const success=Math.random()*100<fd.rate;
+  const def=ITEMS[entry.baseName]||{};
+  const icon=def.icon||'📦';
+
+  if(success){
+    const newLevel=entry.level+1;
+    const newName=makeItemName(entry.baseName,newLevel);
+    const plusCls=plusColor(newLevel);
+    if(entry.location==='inv'){
+      const inv=me.inventory||[];
+      if(inv[entry.idx])inv[entry.idx].name=newName;
+      me.inventory=inv;
+    } else {
+      const eq=me.equipped||{};
+      eq[entry.slot]=newName;me.equipped=eq;
+    }
+    saveProfile();renderFg();
+    if(activeTab==='eq')renderEq();
+    if(activeTab==='iv')renderIv();
+    addChatLine('loot',`✨ ${icon}${entry.baseName} 강화 성공! +${entry.level} → +${newLevel} (-${fd.cost}G)`);
+    // 최대 강화 달성
+    if(newLevel>=MAX_FORGE){
+      addChatLine('loot',`🏆 ${entry.baseName} 최대 강화 +${MAX_FORGE} 달성!`);
+    }
+  } else {
+    // 실패 시 강화 수치 -1 (0 이하로 내려가지 않음)
+    const newLevel=Math.max(0,entry.level-1);
+    const newName=makeItemName(entry.baseName,newLevel);
+    if(entry.location==='inv'){
+      const inv=me.inventory||[];
+      if(inv[entry.idx])inv[entry.idx].name=newName;
+      me.inventory=inv;
+    } else {
+      const eq=me.equipped||{};
+      eq[entry.slot]=newName;me.equipped=eq;
+    }
+    saveProfile();renderFg();
+    if(activeTab==='eq')renderEq();
+    if(activeTab==='iv')renderIv();
+    addChatLine('sys',`💔 ${icon}${entry.baseName} 강화 실패... +${entry.level}→+${newLevel} (-${fd.cost}G)`);
+  }
+  if(activeTab==='st')renderSt();
+}
+
+// ── 채팅 ──────────────────────────────────────────
+function addChatLine(cls,text){
+  const box=document.getElementById('chat-log');
+  const d=document.createElement('div');d.className='cl '+(cls||'sys');d.textContent=text;
+  box.appendChild(d);box.scrollTop=box.scrollHeight;
+}
+async function pushChat(msg){await db.from('chats').insert({scope:'plaza',username:msg.sys?null:me.username,text:msg.text,is_sys:!!msg.sys});}
+async function sendChat(){
+  const inp=document.getElementById('ci');const t=inp.value.trim();if(!t)return;inp.value='';
+  showBubble(me.id,t);
+  await pushChat({text:t});
+}
+async function chatPoll(){
+  const{data:msgs}=await db.from('chats').select('*').eq('scope','plaza')
+    .gt('created_at',new Date(Date.now()-300000).toISOString())
+    .order('created_at',{ascending:true}).limit(80);
+  if(!msgs)return;
+  const newM=msgs.filter(m=>new Date(m.created_at).getTime()>lastChatTs);
+  if(!newM.length)return;
+  lastChatTs=new Date(msgs[msgs.length-1].created_at).getTime();
+  newM.forEach(m=>{
+    if(m.is_sys)addChatLine('sys',m.text);
+    else{
+      const box=document.getElementById('chat-log');
+      const d=document.createElement('div');d.className='cl';
+      d.innerHTML=`<span class="cn" style="color:${nc(m.username)}">${m.username}</span> ${m.text}`;
+      box.appendChild(d);box.scrollTop=box.scrollHeight;
+      const p=Object.values(players).find(x=>x.username===m.username);
+      if(p)showBubble(p.id,m.text);
+    }
+  });
+}
+
+// ── 프레즌스 ──────────────────────────────────────
+async function saveP(){if(!me)return;await db.from('presence').upsert({id:me.id,username:me.username,cls:me.cls,x:Math.round(myPos.x),y:Math.round(myPos.y),ts:Date.now()},{onConflict:'id'});}
+async function presencePoll(){
+  const{data}=await db.from('presence').select('*').gt('ts',Date.now()-10000);if(!data)return;
+  const online={};data.forEach(p=>{if(p.id!==me.id)online[p.id]=p;});
+  for(const id of Object.keys(players)){if(!online[id]){removeChar(id);delete players[id];}}
+  for(const[id,p]of Object.entries(online))players[id]={...(players[id]||{}),...p};
+}
+
+// ── DB 저장 ───────────────────────────────────────
+async function saveProfile(){
+  if(!me)return;
+  try{
+    await db.from('profiles').update({
+      hp:       me.hp,
+      inventory:me.inventory||[],
+      equipped: me.equipped||{},
+      gold:     me.gold||0,
+      level:    me.level||1,
+      exp:      me.exp||0,
+      kills:    me.kills||0,
+      defense:  myDef(),
+    }).eq('id',me.id);
+  }catch(e){console.error('saveProfile inn:',e);}
+}
+
+// ── 이동 ──────────────────────────────────────────
+async function goToDungeon(){
+  if(exitTransitioning)return;
+  exitTransitioning=true;
+  clearInterval(regenTmr);
+  await saveProfile();
+  await db.from('presence').delete().eq('id',me.id);
+  await pushChat({sys:true,text:`${me.username}님이 던전으로 향했습니다.`});
+  window.location.href='index.html';
+}
+
+// ── 입장 ──────────────────────────────────────────
+function enterInn(){
+  myPos={x:280+Math.random()*200,y:380+Math.random()*180};
+  document.getElementById('loading').style.display='none';
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('game-wrap').style.display='flex';
+  resize();updateHpHud();startRegen();loop();
+  swTab('st');  setInterval(saveP,1800);setInterval(presencePoll,2000);setInterval(chatPoll,1400);
+  chatPoll();
+  addChatLine('sys',`🍺 여관에 입장했습니다. HP 자동 회복 중...`);
+  pushChat({sys:true,text:`${me.username}님이 여관에 들어왔습니다.`});
+}
+
+// ── 로그인 폼 ─────────────────────────────────────
+async function doLogin(){
+  const username=document.getElementById('l-id').value.trim().toLowerCase();
+  const password=document.getElementById('l-pw').value;
+  document.getElementById('l-err').textContent='';
+  if(!username||!password){document.getElementById('l-err').textContent='아이디와 비밀번호를 입력해주세요';return;}
+  const email=username.includes('@')?username:`${username}@dungeon.game`;
+  const{data,error}=await db.auth.signInWithPassword({email,password});
+  if(error){document.getElementById('l-err').textContent='아이디 또는 비밀번호가 올바르지 않습니다';return;}
+  const{data:p}=await db.from('profiles').select('*').eq('id',data.user.id).single();
+  me=p?{...p,inventory:p.inventory||[],equipped:p.equipped||{}}:{id:data.user.id,username,cls:'전사',hp:120,maxHp:120,gold:0,level:1,kills:0,exp:0,inventory:[],equipped:{}};
+  enterInn();
+}
+
+window.addEventListener('beforeunload',async()=>{try{await db.from('presence').delete().eq('id',me?.id);}catch(e){}});
+
+// ── 자동 로그인 ───────────────────────────────────
+(async()=>{
+  try{
+    const{data:{session}}=await db.auth.getSession();
+    if(session){
+      const uid=session.user.id;
+      const username=session.user.email.split('@')[0];
+      // DB에서 최신 프로필 불러오기 (아이템/레벨 모두 포함)
+      const{data:p,error}=await db.from('profiles').select('*').eq('id',uid).single();
+      if(p){
+        me={
+          ...p,
+          inventory: Array.isArray(p.inventory)?p.inventory:[],
+          equipped:  (p.equipped&&typeof p.equipped==='object')?p.equipped:{},
+          level:     p.level||1,
+          exp:       p.exp||0,
+          gold:      p.gold||0,
+          kills:     p.kills||0,
+        };
+      } else {
+        me={id:uid,username,cls:'전사',hp:120,maxHp:120,gold:0,level:1,kills:0,exp:0,inventory:[],equipped:{}};
+      }
+      enterInn();
+      return;
+    }
+  }catch(e){console.error('자동로그인 오류:',e);}
+  document.getElementById('loading').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+})();
+</script>
+</body>
+</html>
