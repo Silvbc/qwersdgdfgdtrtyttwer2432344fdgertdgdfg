@@ -9,7 +9,11 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#0d0f14;--bg2:#13161e;--bg3:#1a1e28;--border:#2a2f3f;--border2:#3a4055;--gold:#c9a84c;--gold-dim:#8a6f2e;--amber-dim:#8a5f2e;--gold-glow:rgba(201,168,76,0.15);--text:#e8e0d0;--text-dim:#8a8070;--text-mute:#50504a;--red:#c84a4a;--green:#4a9e6a;--blue:#4a7ec8;--amber:#c8874a;--radius:8px;--radius-lg:12px;}
-html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-serif;font-size:14px;overflow:hidden}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-serif;font-size:14px;overflow:hidden;
+  -webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;
+  -webkit-touch-callout:none;}
+/* 입력창은 선택 허용 */
+input,textarea{-webkit-user-select:text;-moz-user-select:text;user-select:text;}
 button{cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:all .15s}
 input{font-family:'Noto Sans KR',sans-serif}
 #screen-login{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:var(--bg);background-image:radial-gradient(ellipse 60% 40% at 50% 0%,rgba(201,168,76,0.06) 0%,transparent 70%);z-index:100}
