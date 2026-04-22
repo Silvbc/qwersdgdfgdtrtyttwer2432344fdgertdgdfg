@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>던전 어드벤처</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Noto+Sans+KR:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0d0f14;--bg2:#13161e;--bg3:#1a1e28;--border:#2a2f3f;--border2:#3a4055;--gold:#c9a84c;--gold-dim:#8a6f2e;--gold-glow:rgba(201,168,76,0.15);--text:#e8e0d0;--text-dim:#8a8070;--text-mute:#50504a;--red:#c84a4a;--green:#4a9e6a;--blue:#4a7ec8;--amber:#c8874a;--radius:8px;--radius-lg:12px;}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-serif;font-size:14px;overflow:hidden}
+button{cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:all .15s}
+input{font-family:'Noto Sans KR',sans-serif}
+#screen-login{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:var(--bg);background-image:radial-gradient(ellipse 60% 40% at 50% 0%,rgba(201,168,76,0.06) 0%,transparent 70%);z-index:100}
+.lw{width:100%;max-width:380px;padding:2rem}
+.ll{text-align:center;margin-bottom:2.5rem}
+.lr{font-size:48px;display:block;margin-bottom:.75rem;filter:drop-shadow(0 0 16px rgba(201,168,76,0.5));animation:pg 3s ease-in-out infinite}
+@keyframes pg{0%,100%{filter:drop-shadow(0 0 12px rgba(201,168,76,0.4))}50%{filter:drop-shadow(0 0 24px rgba(201,168,76,0.7))}}
+.ll h1{font-family:'Cinzel',serif;font-size:26px;font-weight:700;color:var(--gold);letter-spacing:2px;margin-bottom:4px}
+.ll p{font-size:13px;color:var(--text-dim)}
+.lb{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.75rem;display:flex;flex-direction:column;gap:14px}
+.fd{display:flex;flex-direction:column;gap:5px}
+.fd label{font-size:12px;color:var(--text-dim);font-weight:500}
+.fd input{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:10px 13px;font-size:14px;outline:none;transition:border-color .2s;width:100%}
+.fd input:focus{border-color:var(--gold-dim)}
+.fd input::placeholder{color:var(--text-mute)}
+.em{font-size:12px;color:var(--red);min-height:16px}
+.bg{background:linear-gradient(135deg,#c9a84c 0%,#8a6f2e 100%);color:#1a1408;border:none;border-radius:var(--radius);padding:11px 20px;font-size:14px;font-weight:700;width:100%;box-shadow:0 2px 12px rgba(201,168,76,0.2)}
+.bg:hover{filter:brightness(1.1)}
+.bgh{background:transparent;border:1px solid var(--border2);border-radius:var(--radius);color:var(--text-dim);padding:7px 14px;font-size:12px}
+.bgh:hover{border-color:var(--gold-dim);color:var(--text);background:var(--gold-glow)}
+#screen-game{display:none;height:100vh;flex-direction:row}
+#dc{flex:1;position:relative;overflow:hidden}
+#cv{position:absolute;top:0;left:0;display:block;cursor:crosshair}
+#el{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
+.fdmg{position:absolute;pointer-events:none;font-size:14px;font-weight:700;animation:fa .9s ease-out forwards;z-index:20}
+@keyframes fa{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-40px)}}
+.fdmg.p{color:#e06060}.fdmg.e{color:#c8e060}.fdmg.h{color:#60c880}.fdmg.x{color:#80a0ff;font-size:11px}.fdmg.g{color:var(--gold);font-size:11px}
+.ce{position:absolute;display:flex;flex-direction:column;align-items:center;pointer-events:none;transition:left .15s linear,top .15s linear}
+.cs{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;border:2px solid rgba(201,168,76,0.3);box-shadow:0 2px 8px rgba(0,0,0,0.5)}
+.cs.me{border-color:var(--gold);box-shadow:0 0 12px var(--gold-glow)}
+.cn2{font-size:9px;white-space:nowrap;background:rgba(0,0,0,0.75);padding:1px 5px;border-radius:8px;color:var(--text);border:1px solid var(--border);margin-top:1px}
+.chw{width:32px;height:3px;background:rgba(255,255,255,0.1);border-radius:2px;margin-top:2px}
+.chb{height:100%;border-radius:2px;background:var(--green);transition:width .3s}
+/* 사람 캐릭터 걷기 애니메이션 */
+@keyframes wll{0%,100%{transform:rotate(-18deg)}50%{transform:rotate(18deg)}}
+@keyframes wlr{0%,100%{transform:rotate(18deg)}50%{transform:rotate(-18deg)}}
+@keyframes wal{0%,100%{transform:rotate(14deg)}50%{transform:rotate(-14deg)}}
+@keyframes war{0%,100%{transform:rotate(-14deg)}50%{transform:rotate(14deg)}}
+@keyframes wbd{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+.ce.wk .leg-l{animation:wll .38s ease infinite}
+.ce.wk .leg-r{animation:wlr .38s ease infinite}
+.ce.wk .arm-l{animation:wal .38s ease infinite}
+.ce.wk .arm-r{animation:war .38s ease infinite}
+.ce.wk .body-g{animation:wbd .38s ease infinite}
+/* 말풍선 애니메이션 */
+@keyframes bubIn{from{opacity:0;transform:translateX(-50%) scale(.85)}to{opacity:1;transform:translateX(-50%) scale(1)}}
+.me2{position:absolute;display:flex;flex-direction:column;align-items:center;cursor:pointer;transition:left .1s,top .1s}
+.ms{font-size:22px;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.8));transition:transform .1s}
+.me2:hover .ms{transform:scale(1.15)}
+.mhw{width:40px;height:4px;background:rgba(0,0,0,0.5);border-radius:2px;border:1px solid rgba(255,255,255,0.1);margin-top:2px}
+.mhf{height:100%;border-radius:2px;background:#c84a4a;transition:width .3s}
+.mnl{font-size:9px;color:var(--text-dim);white-space:nowrap}
+@keyframes mh{0%,100%{filter:drop-shadow(0 2px 4px rgba(0,0,0,0.8))}50%{filter:drop-shadow(0 0 8px rgba(200,74,74,0.9)) brightness(1.5)}}
+.me2.hit .ms{animation:mh .25s ease}
+.de{position:absolute;cursor:pointer;font-size:16px;animation:db 1.5s ease-in-out infinite;filter:drop-shadow(0 0 6px rgba(201,168,76,0.6));pointer-events:all}
+@keyframes db{0%,100%{transform:translate(-50%,-50%) translateY(0)}50%{transform:translate(-50%,-50%) translateY(-4px)}}
+#rp{width:300px;background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
+.pt{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.ptl{font-family:'Cinzel',serif;font-size:13px;color:var(--gold)}
+.tabs{display:flex;gap:4px;padding:8px 12px;border-bottom:1px solid var(--border);flex-shrink:0}
+.tb{flex:1;padding:6px;background:transparent;border:1px solid var(--border);border-radius:var(--radius);color:var(--text-dim);font-size:11px;text-align:center}
+.tb.ac{background:var(--bg3);border-color:var(--gold-dim);color:var(--gold)}
+.pc{flex:1;overflow-y:auto;padding:10px 12px;min-height:0;max-height:50vh}
+.pc::-webkit-scrollbar{width:3px}
+.pc::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.sh{display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.si{font-size:28px}.sn{font-size:14px;font-weight:500}.sc{font-size:11px;color:var(--text-dim)}.sl{margin-left:auto;font-family:'Cinzel',serif;font-size:13px;color:var(--gold)}
+.ht{height:8px;background:var(--bg3);border-radius:4px;overflow:hidden;border:1px solid var(--border);margin:4px 0}
+.hf2{height:100%;border-radius:4px;transition:width .4s}
+.sn2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}
+.sn3{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:6px 8px;font-size:11px;color:var(--text-dim)}
+.sn3 b{display:block;font-size:14px;color:var(--text);font-weight:500;margin-top:1px}
+.et{height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-top:8px}
+.ef{height:100%;background:var(--blue);border-radius:2px;transition:width .4s}
+.eg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.es{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:10px;text-align:center;min-height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.es.hi{border-color:var(--gold-dim);cursor:pointer}
+.es.hi:hover{background:var(--bg2);border-color:var(--gold)}
+.esl{font-size:10px;color:var(--text-mute);letter-spacing:.5px}
+.esi{font-size:20px}.esn{font-size:10px;color:var(--gold)}.ess{font-size:10px;color:var(--green)}
+.ig{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.ic{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;transition:all .15s;position:relative}
+.ic:hover{border-color:var(--gold-dim);background:var(--bg2)}
+.ic.em2{cursor:default}.ic.em2:hover{border-color:var(--border);background:var(--bg3)}
+.ii{font-size:18px}.in{font-size:8px;color:var(--text-dim);text-align:center;line-height:1.2}
+.rcommon{border-color:var(--border2)}.runcommon{border-color:#4a7e4a}.rrare{border-color:#4a4a9e}.repic{border-color:#8a4a9e}
+.cs2{flex:1;border-top:1px solid var(--border);padding:8px 12px;display:flex;flex-direction:column;gap:6px;min-height:0}
+.cl2{flex:1;overflow-y:auto;font-size:11px;line-height:1.7;color:var(--text-dim);min-height:0}
+.cl2::-webkit-scrollbar{width:3px}
+.cl2::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.cl .cn3{font-weight:500;color:var(--text)}
+.cl.sy{color:var(--text-mute);font-style:italic}
+.cl.bt{color:#e09060}.cl.lt{color:var(--gold)}.cl.lv{color:var(--blue)}.cl.hl{color:#60c880}
+.cr{display:flex;gap:5px}
+.cr input{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:6px 9px;font-size:12px;outline:none}
+.cr input:focus{border-color:var(--gold-dim)}
+.cr button{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text-dim);padding:6px 10px;font-size:11px}
+.cr button:hover{color:var(--text);border-color:var(--gold-dim)}
+#tt{position:fixed;background:var(--bg2);border:1px solid var(--gold-dim);border-radius:var(--radius-lg);padding:10px 14px;font-size:12px;pointer-events:none;z-index:1000;display:none;min-width:150px;box-shadow:0 4px 20px rgba(0,0,0,0.6)}
+#tt .tn{font-size:14px;font-weight:500;color:var(--gold);margin-bottom:4px}
+#tt .ty{font-size:10px;color:var(--text-dim);margin-bottom:6px}
+#tt .ts{color:var(--green);margin-bottom:4px}
+#tt .td{font-size:10px;color:var(--text-mute);margin-top:6px;border-top:1px solid var(--border);padding-top:5px}
+</style>
+</head>
+<body>
+<div id="screen-login">
+  <div class="lw">
+    <div class="ll"><span class="lr">⚔</span><h1>던전 어드벤처</h1><p>용사여, 던전으로 향하라</p></div>
+    <div class="lb">
+      <div class="fd"><label>아이디</label><input id="l-id" type="text" placeholder="아이디 입력" autocomplete="username"/></div>
+      <div class="fd"><label>비밀번호</label><input id="l-pw" type="password" placeholder="비밀번호 입력" onkeydown="if(event.key==='Enter')doLogin()"/></div>
+      <div class="em" id="l-err"></div>
+      <button class="bg" onclick="doLogin()">던전 입장</button>
+    </div>
+  </div>
+</div>
+<div id="screen-game">
+  <div id="dc">
+    <canvas id="cv"></canvas>
+    <div id="el"></div>
+  </div>
+  <div id="rp">
+    <div class="pt">
+      <span class="ptl">⚔ 던전</span>
+      <div style="display:flex;gap:6px">
+        <button class="bgh" onclick="window.location.href='chatroom.html'" style="font-size:11px;padding:5px 9px">🍺 여관</button>
+        <button class="bgh" onclick="doLogout()" style="font-size:11px;padding:5px 9px">로그아웃</button>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tb ac" onclick="swTab('st')" id="tab-st">상태</button>
+      <button class="tb" onclick="swTab('eq')" id="tab-eq">장비</button>
+      <button class="tb" onclick="swTab('iv')" id="tab-iv">인벤토리</button>
+    </div>
+    <div class="pc" id="pc"></div>
+    <div class="cs2">
+      <div class="cl2" id="cl"></div>
+      <div class="cr"><input id="ci" type="text" placeholder="채팅..." maxlength="50" onkeydown="if(event.key==='Enter')sendChat()"/><button onclick="sendChat()">전송</button></div>
+    </div>
+  </div>
+</div>
+<div id="tt"><div class="tn" id="tn"></div><div class="ty" id="ty"></div><div class="ts" id="ts"></div><div class="td" id="td"></div></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
