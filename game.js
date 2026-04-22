@@ -314,37 +314,109 @@ function drawMap(){
   drawHotbar();
 }
 
+// ── 숲 구역 상수 ──────────────────────────────────
+const FOREST_START_X = MAP_W*0.5;   // 1200
+const FOREST_END_X   = MAP_W*0.85;  // 2040
+const FOREST_W = FOREST_END_X - FOREST_START_X; // 840
+const ZONE_COLS = 3, ZONE_ROWS = 2;
+const ZONE_W = FOREST_W / ZONE_COLS;  // 280
+const ZONE_H = MAP_H / ZONE_ROWS;     // 700
+
+// 구역 정의: 순서 좌→우 위→아래 (0=좌상, 1=중상, 2=우상, 3=좌하, 4=중하, 5=우하)
+const FOREST_ZONES=[
+  {key:'wolf',   label:'🐺 연두숲',    baseColor:[80,140,60],  darkColor:[60,110,45],  glowR:80, glowG:200,glowB:80},
+  {key:'spider', label:'🕷️ 회색숲',    baseColor:[90,100,90],  darkColor:[70,80,70],   glowR:150,glowG:150,glowB:150},
+  {key:'skull',  label:'💀 초록숲',    baseColor:[40,120,40],  darkColor:[30,90,30],   glowR:40, glowG:220,glowB:80},
+  {key:'orc',    label:'👹 붉은숲',    baseColor:[120,60,50],  darkColor:[90,45,38],   glowR:220,glowG:80, glowB:60},
+  {key:'goblin', label:'👺 어두운숲',  baseColor:[70,70,80],   darkColor:[55,55,65],   glowR:100,glowG:100,glowB:150},
+  {key:'ogre',   label:'👾 하늘숲',    baseColor:[50,110,140], darkColor:[40,85,110],  glowR:80, glowG:180,glowB:240},
+];
+
+// 구역 인덱스 → 월드좌표 (중심)
+function zoneRect(zoneIdx){
+  const col=zoneIdx%ZONE_COLS, row=Math.floor(zoneIdx/ZONE_COLS);
+  const x1=FOREST_START_X+col*ZONE_W;
+  const y1=row*ZONE_H;
+  return{x1,y1,x2:x1+ZONE_W,y2:y1+ZONE_H,cx:x1+ZONE_W/2,cy:y1+ZONE_H/2};
+}
+
 function drawWorldMap(){
   const W=cv.width,H=cv.height;
-  // 마을 구역 (왼쪽 1/2): 돌바닥
-  const villageEnd=MAP_W*0.5;
-  const forestEnd=MAP_W*0.85;
+  const villageEnd=FOREST_START_X;
   for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
     const wx=c*TILE-cam.x,wy=r*TILE-cam.y;
     if(wx+TILE<0||wx>W||wy+TILE<0||wy>H)continue;
-    const worldX=c*TILE;
+    const worldX=c*TILE, worldY=r*TILE;
     if(mapData[r][c]===1){ctx.fillStyle='#282030';ctx.fillRect(wx,wy,TILE,TILE);}
-    else if(worldX<villageEnd){// 마을: 돌길
+    else if(worldX<villageEnd){
+      // 마을: 돌길
       ctx.fillStyle=(r+c)%2===0?'#c8b890':'#b8a880';ctx.fillRect(wx,wy,TILE,TILE);
       ctx.strokeStyle='rgba(0,0,0,0.1)';ctx.lineWidth=0.5;ctx.strokeRect(wx,wy,TILE,TILE);
-    } else if(worldX<forestEnd){// 숲: 풀밭
-      const shade=Math.sin(r*0.7+c*0.5)*0.05;
-      ctx.fillStyle=`rgb(${Math.floor(50+shade*50)},${Math.floor(90+shade*50)},${Math.floor(40+shade*30)})`;
+    } else if(worldX<FOREST_END_X){
+      // 숲: 어느 구역인지 계산
+      const col=Math.floor((worldX-FOREST_START_X)/ZONE_W);
+      const row=Math.floor(worldY/ZONE_H);
+      const zi=clamp(row*ZONE_COLS+col,0,5);
+      const z=FOREST_ZONES[zi];
+      // 체커 패턴으로 약간 변화
+      const even=(r+c)%2===0;
+      const shade=even?0:10;
+      ctx.fillStyle=`rgb(${z.baseColor[0]+shade},${z.baseColor[1]+shade},${z.baseColor[2]+shade})`;
       ctx.fillRect(wx,wy,TILE,TILE);
-      // 나무 광원
-      if(r%5===2&&c%6===2){const fl=0.4+Math.sin(torchT+c)*0.15;const g=ctx.createRadialGradient(wx+TILE/2,wy+TILE/2,5,wx+TILE/2,wy+TILE/2,60);g.addColorStop(0,`rgba(40,180,40,${0.1*fl})`);g.addColorStop(1,'transparent');ctx.fillStyle=g;ctx.fillRect(wx-30,wy-30,TILE+60,TILE+60);}
-    } else {// 던전 입구 구역: 어두운 바위
+      // 구역 내 광원 효과
+      if(r%6===2&&c%7===3){
+        const fl=0.35+Math.sin(torchT*1.5+c+r)*0.15;
+        const g=ctx.createRadialGradient(wx+TILE/2,wy+TILE/2,4,wx+TILE/2,wy+TILE/2,50);
+        g.addColorStop(0,`rgba(${z.glowR},${z.glowG},${z.glowB},${0.12*fl})`);
+        g.addColorStop(1,'transparent');
+        ctx.fillStyle=g;ctx.fillRect(wx-20,wy-20,TILE+40,TILE+40);
+      }
+    } else {
+      // 던전 입구: 어두운 바위
       ctx.fillStyle=(r+c)%2===0?'#2a2535':'#221e2e';ctx.fillRect(wx,wy,TILE,TILE);
     }
   }
-  // 건물 그리기
+
+  // 구역 경계선 + 구역 라벨
+  drawForestZoneBorders();
   drawVillageBuildings();
-  // 나무들
   drawForestTrees();
-  // 여관 입구
   drawInnEntrance();
-  // 던전 입구
   drawDungeonEntrance();
+}
+
+function drawForestZoneBorders(){
+  FOREST_ZONES.forEach((z,i)=>{
+    const rect=zoneRect(i);
+    const sx=rect.x1-cam.x, sy=rect.y1-cam.y;
+    const sw=ZONE_W, sh=ZONE_H;
+    if(sx+sw<0||sx>cv.width||sy+sh<0||sy>cv.height)return;
+
+    // 구역 경계
+    ctx.save();
+    ctx.strokeStyle='rgba(0,0,0,0.35)';ctx.lineWidth=2;ctx.setLineDash([6,4]);
+    ctx.strokeRect(sx,sy,sw,sh);
+    ctx.setLineDash([]);
+
+    // 구역 라벨 (중앙 상단)
+    const lx=sx+sw/2, ly=sy+28;
+    ctx.fillStyle='rgba(0,0,0,0.6)';
+    const lw=ctx.measureText(z.label).width+16;
+    ctx.beginPath();
+    if(ctx.roundRect)ctx.roundRect(lx-lw/2,ly-16,lw,20,6);
+    else ctx.rect(lx-lw/2,ly-16,lw,20);
+    ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.15)';ctx.lineWidth=1;
+    ctx.beginPath();
+    if(ctx.roundRect)ctx.roundRect(lx-lw/2,ly-16,lw,20,6);
+    else ctx.rect(lx-lw/2,ly-16,lw,20);
+    ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,0.85)';
+    ctx.font='bold 12px Noto Sans KR,sans-serif';
+    ctx.textAlign='center';
+    ctx.fillText(z.label,lx,ly);
+    ctx.restore();
+  });
 }
 
 function drawVillageBuildings(){
@@ -401,27 +473,36 @@ function drawBuilding(bx,by,bw,bh,wallCol,roofCol,label,hasAnvil){
 }
 
 function drawForestTrees(){
-  // 숲 구역에 나무 배치
-  const forestStartX=MAP_W*0.5;
-  const forestEndX=MAP_W*0.85;
-  const treePositions=[];
-  for(let x=forestStartX+80;x<forestEndX-80;x+=120){
-    for(let y=200;y<MAP_H-200;y+=110){
-      treePositions.push([x+(Math.sin(x+y)*30),y+(Math.cos(x*y)*20)]);
+  // 구역별 나무 색상
+  const zoneTreeColors=[
+    ['#4a7a30','#5a9a3a','#6ab040'], // 연두숲: 밝은 연두
+    ['#607060','#708070','#809080'], // 회색숲: 회색조
+    ['#1a6030','#2a8040','#3a9a50'], // 초록숲: 진초록
+    ['#6a2010','#8a3020','#9a4030'], // 붉은숲: 붉은 톤
+    ['#404050','#505060','#606070'], // 어두운숲: 어두운 회색
+    ['#306080','#407090','#5080a0'], // 하늘숲: 청록/하늘
+  ];
+  for(let x=FOREST_START_X+60;x<FOREST_END_X-60;x+=100){
+    for(let y=80;y<MAP_H-80;y+=90){
+      const tx=x+(Math.sin(x*0.05+y*0.03)*25);
+      const ty=y+(Math.cos(x*0.04+y*0.05)*20);
+      const sx=tx-cam.x,sy=ty-cam.y;
+      if(sx<-50||sx>cv.width+50||sy<-80||sy>cv.height+50)continue;
+      // 어느 구역인지 계산
+      const col=Math.floor((tx-FOREST_START_X)/ZONE_W);
+      const row=Math.floor(ty/ZONE_H);
+      const zi=clamp(row*ZONE_COLS+col,0,5);
+      const tc=zoneTreeColors[zi];
+      // 그림자
+      ctx.fillStyle='rgba(0,0,0,0.2)';ctx.beginPath();ctx.ellipse(sx+4,sy+8,18,9,0,0,Math.PI*2);ctx.fill();
+      // 줄기
+      ctx.fillStyle='#5a3a18';ctx.fillRect(sx-4,sy-18,8,26);
+      // 잎 (구역별 색상)
+      ctx.fillStyle=tc[0];ctx.beginPath();ctx.arc(sx,sy-26,20,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle=tc[1];ctx.beginPath();ctx.arc(sx-4,sy-36,14,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle=tc[2];ctx.beginPath();ctx.arc(sx+3,sy-32,10,0,Math.PI*2);ctx.fill();
     }
   }
-  treePositions.forEach(([tx,ty])=>{
-    const sx=tx-cam.x,sy=ty-cam.y;
-    if(sx<-50||sx>cv.width+50||sy<-80||sy>cv.height+50)return;
-    // 나무 그림자
-    ctx.fillStyle='rgba(0,0,0,0.25)';ctx.beginPath();ctx.ellipse(sx+5,sy+10,20,10,0,0,Math.PI*2);ctx.fill();
-    // 나무 줄기
-    ctx.fillStyle='#5a3a18';ctx.fillRect(sx-5,sy-20,10,30);
-    // 나무 잎
-    ctx.fillStyle='#1a5c1a';ctx.beginPath();ctx.arc(sx,sy-30,22,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#2a7a2a';ctx.beginPath();ctx.arc(sx-5,sy-40,16,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#3a9a3a';ctx.beginPath();ctx.arc(sx+3,sy-35,12,0,Math.PI*2);ctx.fill();
-  });
 }
 
 function drawInnEntrance(){
@@ -698,7 +779,8 @@ cv.addEventListener('mouseleave',()=>setCursor('default'));
 let rightHoldTimer=null;
 let rightHoldActive=false;
 
-// 우클릭 방지 (기본 컨텍스트 메뉴 차단)
+// 우클릭 컨텍스트 메뉴 전체 차단 (캔버스 + 드랍아이템 + 몬스터 등 모두)
+document.addEventListener('contextmenu',e=>{e.preventDefault();});
 cv.addEventListener('contextmenu',e=>{e.preventDefault();});
 
 cv.addEventListener('mousedown',e=>{
@@ -978,38 +1060,32 @@ function doPickup(id,drop){
 // ── 스폰 ──────────────────────────────────────────
 function spawnMonsters(){
   if(currentZone===ZONE.WORLD){
-    // 숲을 6개 수직 구역으로 분할 (x축 기준)
-    // 전체 숲: x 1200~2200, y 100~1300
-    // 구역 너비: 약 170px 씩
-    const zones=[
-      {key:'wolf',   x1:1200,x2:1365, label:'🐺 늑대 구역'},
-      {key:'spider', x1:1365,x2:1530, label:'🕷️ 거미 구역'},
-      {key:'skull',  x1:1530,x2:1695, label:'💀 해골 구역'},
-      {key:'orc',    x1:1695,x2:1860, label:'👹 오크 구역'},
-      {key:'goblin', x1:1860,x2:2030, label:'👺 고블린 구역'},
-      {key:'ogre',   x1:2030,x2:2200, label:'👾 오우거 구역'},
-    ];
-    zones.forEach((zone,zi)=>{
-      const mons=MON_ZONES[zone.key];
+    const zoneKeys=['wolf','spider','skull','orc','goblin','ogre'];
+    zoneKeys.forEach((key,zi)=>{
+      const rect=zoneRect(zi);
+      const mons=MON_ZONES[key];
       const normals=mons.filter(m=>!m.boss);
       const bosses=mons.filter(m=>m.boss);
-      const cx=(zone.x1+zone.x2)/2;
-      // 일반 몬스터 배치 (구역 안에 고르게)
-      const rows=3,cols=3;
-      normals.forEach((def,i)=>{
-        for(let r=0;r<rows;r++){
-          const x=zone.x1+40+(zone.x2-zone.x1-80)*((i%cols+Math.random()*0.4)/cols);
-          const y=200+r*(1000/rows)+Math.random()*60;
-          const sp=safeSpawn(Math.min(Math.max(x,zone.x1+30),zone.x2-30),Math.min(Math.max(y,150),1250),50);
-          const id=`z${zi}_${def.name}_${r}`;
+      const pad=40; // 구역 경계에서 안쪽 여백
+
+      // 일반 몬스터: 구역 안에 격자 배치
+      normals.forEach((def,ni)=>{
+        const count=3; // 종류당 3마리
+        for(let k=0;k<count;k++){
+          const x=rect.x1+pad+Math.random()*(ZONE_W-pad*2);
+          const y=rect.y1+pad+Math.random()*(ZONE_H-pad*2-80); // 하단 보스 공간 확보
+          const sp=safeSpawn(x,y,50);
+          const id=`z${zi}_${ni}_${k}`;
           monsters[id]={...def,id,alive:true,hp:def.hp,maxHp:def.hp,x:sp.x,y:sp.y};
         }
       });
-      // 보스 배치 (구역 중앙 하단)
-      bosses.forEach((def,i)=>{
-        const x=cx+(i-(bosses.length-1)/2)*120;
-        const sp=safeSpawn(Math.min(Math.max(x,zone.x1+40),zone.x2-40),900+i*80,60);
-        const id=`z${zi}_boss_${i}`;
+
+      // 보스: 구역 하단 중앙에 배치
+      bosses.forEach((def,bi)=>{
+        const bx=rect.x1+ZONE_W/2+(bi-(bosses.length-1)/2)*100;
+        const by=rect.y1+ZONE_H-100;
+        const sp=safeSpawn(bx,by,50);
+        const id=`z${zi}_boss_${bi}`;
         monsters[id]={...def,id,alive:true,hp:def.hp,maxHp:def.hp,x:sp.x,y:sp.y};
       });
     });
