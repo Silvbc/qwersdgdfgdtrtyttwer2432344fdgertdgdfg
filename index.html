@@ -69,9 +69,10 @@ input{font-family:'Noto Sans KR',sans-serif}
 #rp{width:300px;background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
 .pt{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
 .ptl{font-family:'Cinzel',serif;font-size:13px;color:var(--gold)}
-.tabs{display:flex;gap:4px;padding:8px 12px;border-bottom:1px solid var(--border);flex-shrink:0}
-.tb{flex:1;padding:6px;background:transparent;border:1px solid var(--border);border-radius:var(--radius);color:var(--text-dim);font-size:11px;text-align:center}
+.tabs{display:flex;gap:3px;padding:6px 10px;border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap}
+.tb{flex:1;min-width:0;padding:5px 3px;background:transparent;border:1px solid var(--border);border-radius:var(--radius);color:var(--text-dim);font-size:10px;text-align:center;cursor:pointer}
 .tb.ac{background:var(--bg3);border-color:var(--gold-dim);color:var(--gold)}
+.boss-lbl{color:#ff6060;font-weight:700;font-size:10px}
 .pc{flex:1;overflow-y:auto;padding:10px 12px;min-height:0;max-height:50vh}
 .pc::-webkit-scrollbar{width:3px}
 .pc::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
@@ -144,6 +145,9 @@ input{font-family:'Noto Sans KR',sans-serif}
       <button class="tb ac" onclick="swTab('st')" id="tab-st">상태</button>
       <button class="tb" onclick="swTab('eq')" id="tab-eq">장비</button>
       <button class="tb" onclick="swTab('iv')" id="tab-iv">인벤토리</button>
+      <button class="tb" onclick="swTab('sh')" id="tab-sh">🛒상점</button>
+      <button class="tb" onclick="swTab('fg')" id="tab-fg">🔨강화</button>
+      <button class="tb" onclick="swTab('cf')" id="tab-cf">⚒️제작</button>
     </div>
     <div class="pc" id="pc"></div>
     <div class="cs2">
