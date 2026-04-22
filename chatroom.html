@@ -204,6 +204,24 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto S
       <div class="hb"><div class="hf" id="hf"></div></div>
       <span id="hud-txt" style="font-size:11px"></span>
     </div>
+    <!-- 하단 HP바 + 벨트 UI -->
+    <div id="inn-hud" style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:none;flex-direction:column;align-items:center;gap:4px;pointer-events:none;z-index:50">
+      <!-- HP바 -->
+      <div id="inn-hpbar-wrap" style="background:rgba(10,6,2,0.85);border:1px solid var(--border2);border-radius:8px;padding:5px 12px;width:280px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+          <span style="font-size:10px;color:var(--text-dim)">❤️ HP</span>
+          <span id="inn-hp-txt" style="font-size:10px;color:var(--text-dim)"></span>
+        </div>
+        <div style="height:8px;background:rgba(255,255,255,0.08);border-radius:4px;overflow:hidden">
+          <div id="inn-hp-fill" style="height:100%;border-radius:4px;transition:width .3s"></div>
+        </div>
+      </div>
+      <!-- 벨트 슬롯 -->
+      <div style="background:rgba(10,6,2,0.85);border:1px solid var(--border2);border-radius:8px;padding:5px 8px;pointer-events:all">
+        <div style="font-size:9px;color:var(--text-mute);text-align:center;margin-bottom:4px">🎒 벨트 <span id="inn-belt-row-lbl">1줄</span> · Tab 전환</div>
+        <div style="display:flex;gap:4px" id="inn-belt-slots"></div>
+      </div>
+    </div>
   </div>
 
   <div id="side-panel">
@@ -298,6 +316,9 @@ let me=null,myPos={x:300,y:450},myTarget=null;
 let players={},bubTmr={},lastChatTs=0,torchT=0;
 let regenTmr=null,exitTransitioning=false;
 let activeTab='st';
+// 벨트 상태 (localStorage에서 로드)
+let innHotbar=[[null,null,null,null],[null,null,null,null]];
+let innHotbarRow=0;
 
 const canvas=document.getElementById('pub-canvas');
 const ctx=canvas.getContext('2d');
@@ -733,8 +754,8 @@ function startRegen(){
     if(!me)return;const mh=maxHp();
     if(me.hp>=mh)return;
     me.hp=Math.min(mh,me.hp+5);
-    updateHpHud();
-    if(activeTab==='st')renderSt(); // 상태창 실시간 업데이트
+    updateHpHud();updateInnHud();
+    if(activeTab==='st')renderSt();
     await db.from('profiles').update({hp:me.hp}).eq('id',me.id);
     addChatLine('heal',`🏥 HP +5 회복 (${me.hp}/${mh})`);
   },5000);
@@ -800,7 +821,7 @@ function renderSt(){
 }
 
 function innMaxSlots(){const bag=me?.equipped?.bag;const bd=bag?ITEMS[bag?.replace(/ \+\d+$/,'')]:null;return 20+(bd?.slots||0);}
-function innStackable(name){const bn=name?.replace(/ \+\d+$/,'');const d=ITEMS[bn];if(!d)return false;return!(d.type==='weapon'||d.type==='armor'||d.type==='bag'||name==='엘릭서'||d.type==='buff');}
+function innStackable(name){const bn=name?.replace(/ \+\d+$/,'');const d=ITEMS[bn];if(!d)return false;return!(d.type==='weapon'||d.type==='armor'||d.type==='bag'||d.type==='buff');}
 
 function renderEq(){
   const eq=me.equipped||{};
@@ -831,17 +852,41 @@ function renderIv(){
   const rarMap={c:'',u:'ru',r:'rc',e:'re'};
   let h=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
     <span style="font-size:11px;color:var(--text-dim)">${inv.length}/${maxSlots}칸</span>
-    ${hasBag?`<span style="font-size:10px;color:var(--amber)">🎒 ${me.equipped.bag}</span>`:'<span style="font-size:10px;color:var(--text-mute)">가방 없음 (20칸)</span>'}
-  </div><div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:4px">`;
+    ${hasBag?`<span style="font-size:10px;color:var(--amber)">🎒 ${me.equipped.bag}</span>`:'<span style="font-size:10px;color:var(--text-mute)">가방 없음</span>'}
+  </div>
+  <div style="background:rgba(200,168,74,0.1);border:1px solid var(--gold-dim);border-radius:6px;padding:5px 10px;margin-bottom:7px;display:flex;align-items:center;justify-content:space-between">
+    <span style="font-size:11px;color:var(--text-mute)">보유 골드</span>
+    <span style="font-size:13px;font-weight:600;color:var(--gold)">💰 ${(me.gold||0).toLocaleString()}G</span>
+  </div>
+  <div style="font-size:10px;color:var(--text-mute);margin-bottom:5px">우클릭: 벨트 등록</div>
+  <div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:4px">`;
   for(let i=0;i<maxSlots;i++){
     const item=inv[i];
     if(item){const bn=item.name.replace(/ \+\d+$/,'');const def=ITEMS[bn]||{icon:'📦',rarity:'c'};const rc=rarMap[def.rarity]||'';const cnt=item.count||1;
       const badge=cnt>1?`<div style="position:absolute;bottom:2px;right:2px;background:rgba(0,0,0,.8);color:#e8d0a0;font-size:9px;font-weight:700;padding:0 2px;border-radius:3px">${cnt}</div>`:'';
-      h+=`<div class="inv-cell ${rc}" style="position:relative" onclick="innUseItem(${i})" onmouseenter="showInnTip(event,'${item.name}')" onmouseleave="hideInnTip()"><div class="inv-icon">${def.icon}</div><div class="inv-name">${item.name}</div>${badge}</div>`;
+      h+=`<div class="inv-cell ${rc}" style="position:relative" onclick="innUseItem(${i})" oncontextmenu="innAddToBelt(${i});event.preventDefault()" onmouseenter="showInnTip(event,'${item.name}')" onmouseleave="hideInnTip()"><div class="inv-icon">${def.icon}</div><div class="inv-name">${item.name}</div>${badge}</div>`;
     } else h+=`<div class="inv-cell empty"></div>`;
   }
-  h+='</div><div style="font-size:10px;color:var(--text-mute);margin-top:6px">장착/사용/가방: 클릭</div>';
+  h+='</div><div style="font-size:10px;color:var(--text-mute);margin-top:6px">장착/사용: 클릭 · 벨트등록: 우클릭</div>';
   document.getElementById('tc-iv').innerHTML=h;
+}
+
+function innAddToBelt(invIdx){
+  const inv=me.inventory||[];const item=inv[invIdx];if(!item)return;
+  const bn=item.name.replace(/ \+\d+$/,'');const def=ITEMS[bn];
+  if(!def||!(def.type==='potion'||def.type==='buff')){addChatLine('sys','물약만 벨트에 등록할 수 있습니다.');return;}
+  for(let row=0;row<2;row++)for(let slot=0;slot<4;slot++){
+    if(!innHotbar[row][slot]){
+      innHotbar[row][slot]=item.name;
+      if(innStackable(item.name)&&(item.count||1)>1){item.count=(item.count||1)-1;}
+      else{inv.splice(invIdx,1);}
+      me.inventory=inv;
+      try{localStorage.setItem('belt_'+me.id,JSON.stringify(innHotbar));}catch(e){}
+      saveP();renderIv();updateInnHud();
+      addChatLine('sys',`🎒 벨트 [${row+1}줄-${'QWER'[slot]}] ${item.name} 등록`);return;
+    }
+  }
+  addChatLine('sys','벨트가 가득 찼습니다! (8칸)');
 }
 
 function innUseItem(idx){
@@ -866,10 +911,11 @@ function innUseItem(idx){
 // ── 상점 ──────────────────────────────────────────
 function buildHealerHTML(){
   const inv=me.inventory||[];
-  const smallCount=inv.filter(it=>it.name==='작은 물약').length;
-  const bigCount=inv.filter(it=>it.name==='큰 물약').length;
-  const elixirCount=inv.filter(it=>it.name==='엘릭서').length;
-  const buffCount=inv.filter(it=>it.name==='마법의 강화물약').length;
+  const countItem=name=>innCountItem(name);
+  const smallCount=countItem('작은 물약');
+  const bigCount=countItem('큰 물약');
+  const elixirCount=countItem('엘릭서');
+  const buffCount=countItem('마법의 강화물약');
   const canSmall=smallCount>=5, canBig=bigCount>=5, canElixir=elixirCount>=5;
   const row=(fromIcon,from,fromCnt,canDo,toIcon,to,toCnt,fn,extra='')=>`
     <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:11px;margin-bottom:9px">
@@ -902,57 +948,70 @@ function buildHealerHTML(){
 }
 
 
+// 스택 포함 아이템 수량 계산 (여관용)
+function innCountItem(name){return(me.inventory||[]).reduce((s,it)=>it.name===name?s+(it.count||1):s,0);}
+
+// 스택 포함 아이템 n개 차감 (여관용)
+function innRemoveItem(name,n){
+  const inv=me.inventory||[];let left=n;
+  for(let i=inv.length-1;i>=0&&left>0;i--){
+    if(inv[i].name!==name)continue;
+    const c=inv[i].count||1;
+    if(c<=left){left-=c;inv.splice(i,1);}
+    else{inv[i].count=c-left;left=0;}
+  }
+  me.inventory=inv;
+}
+
+// 스택 포함 아이템 1개 추가 (여관용)
+function innAddItem(name){
+  const inv=me.inventory||[];const max=innMaxSlots();
+  const stackable=innStackable(name);
+  if(stackable){const ex=inv.find(it=>it.name===name);if(ex){ex.count=(ex.count||1)+1;me.inventory=inv;return true;}}
+  if(inv.length>=max)return false;
+  inv.push({name,id:Date.now(),count:1});me.inventory=inv;return true;
+}
+
 function exchangeSmall(){
-  const inv=me.inventory||[];
-  const cnt=inv.filter(it=>it.name==='작은 물약').length;
+  const cnt=innCountItem('작은 물약');
   if(cnt<5){addChatLine('sys','🧪 작은 물약이 5개 필요합니다! (현재 '+cnt+'개)');return;}
-  // 먼저 5개 제거 후 공간 확인
-  let removed=0;
-  for(let i=inv.length-1;i>=0&&removed<5;i--){if(inv[i].name==='작은 물약'){inv.splice(i,1);removed++;}}
-  if(inv.length>=20){
-    // 공간 없으면 롤백
-    for(let i=0;i<5;i++)inv.push({name:'작은 물약',id:Date.now()+i});
+  innRemoveItem('작은 물약',5);
+  const ok=innAddItem('큰 물약');
+  if(!ok){// 공간 없으면 롤백
+    innAddItem('작은 물약');innAddItem('작은 물약');innAddItem('작은 물약');innAddItem('작은 물약');innAddItem('작은 물약');
     addChatLine('sys','인벤토리가 가득 찼습니다!');return;
   }
-  inv.push({name:'큰 물약',id:Date.now()});
-  me.inventory=inv;saveProfile();
-  document.getElementById('modal-body').innerHTML=buildHealerHTML();
+  saveProfile();document.getElementById('modal-body').innerHTML=buildHealerHTML();
   if(activeTab==='iv')renderIv();
   addChatLine('heal','✨ 엘리나: 완성됐어요! ⚗️ 큰 물약 1개 획득!');
 }
 
 function exchangePotion(){
-  const inv=me.inventory||[];
-  const cnt=inv.filter(it=>it.name==='큰 물약').length;
+  const cnt=innCountItem('큰 물약');
   if(cnt<5){addChatLine('sys','⚗️ 큰 물약이 5개 필요합니다! (현재 '+cnt+'개)');return;}
-  let removed=0;
-  for(let i=inv.length-1;i>=0&&removed<5;i--){if(inv[i].name==='큰 물약'){inv.splice(i,1);removed++;}}
-  if(inv.length>=20){
-    for(let i=0;i<5;i++)inv.push({name:'큰 물약',id:Date.now()+i});
+  innRemoveItem('큰 물약',5);
+  const ok=innAddItem('엘릭서');
+  if(!ok){
+    for(let i=0;i<5;i++)innAddItem('큰 물약');
     addChatLine('sys','인벤토리가 가득 찼습니다!');return;
   }
-  inv.push({name:'엘릭서',id:Date.now()});
-  me.inventory=inv;saveProfile();
-  document.getElementById('modal-body').innerHTML=buildHealerHTML();
+  saveProfile();document.getElementById('modal-body').innerHTML=buildHealerHTML();
   if(activeTab==='iv')renderIv();
   addChatLine('heal','✨ 엘리나: 완성됐어요! 💎 엘릭서 1개 획득!');
 }
 
 function exchangeElixir(){
-  const inv=me.inventory||[];
-  const cnt=inv.filter(it=>it.name==='엘릭서').length;
+  const cnt=innCountItem('엘릭서');
   if(cnt<5){addChatLine('sys','💎 엘릭서가 5개 필요합니다! (현재 '+cnt+'개)');return;}
-  let removed=0;
-  for(let i=inv.length-1;i>=0&&removed<5;i--){if(inv[i].name==='엘릭서'){inv.splice(i,1);removed++;}}
-  if(inv.length>=20){
-    for(let i=0;i<5;i++)inv.push({name:'엘릭서',id:Date.now()+i});
+  innRemoveItem('엘릭서',5);
+  const ok=innAddItem('마법의 강화물약');
+  if(!ok){
+    for(let i=0;i<5;i++)innAddItem('엘릭서');
     addChatLine('sys','인벤토리가 가득 찼습니다!');return;
   }
-  inv.push({name:'마법의 강화물약',id:Date.now()});
-  me.inventory=inv;saveProfile();
-  document.getElementById('modal-body').innerHTML=buildHealerHTML();
+  saveProfile();document.getElementById('modal-body').innerHTML=buildHealerHTML();
   if(activeTab==='iv')renderIv();
-  addChatLine('heal','🌟 엘리나: 완성됐어요! 🌟 마법의 강화물약 1개 획득! 2분간 강화됩니다!');
+  addChatLine('heal','🌟 엘리나: 완성됐어요! 🌟 마법의 강화물약 1개 획득!');
 }
 
 function buildShopHTML(){
@@ -1217,15 +1276,64 @@ async function goToDungeon(){
 }
 
 // ── 입장 ──────────────────────────────────────────
+function updateInnHud(){
+  if(!me)return;
+  const mh=maxHp();
+  const pct=Math.max(0,Math.min(100,(me.hp/mh)*100));
+  const hc=pct>50?'#4a9e6a':pct>25?'#c8874a':'#c84a4a';
+  const hud=document.getElementById('inn-hud');
+  if(hud){
+    hud.style.display='flex';
+    document.getElementById('inn-hp-txt').textContent=`${me.hp} / ${mh}`;
+    document.getElementById('inn-hp-fill').style.width=pct+'%';
+    document.getElementById('inn-hp-fill').style.background=hc;
+    // 벨트 슬롯 렌더
+    document.getElementById('inn-belt-row-lbl').textContent=`${innHotbarRow+1}줄`;
+    const slots=document.getElementById('inn-belt-slots');
+    slots.innerHTML='';
+    for(let i=0;i<4;i++){
+      const name=innHotbar[innHotbarRow][i];
+      const def=name?ITEMS[name?.replace(/ \+\d+$/,'')]||{}:{};
+      const div=document.createElement('div');
+      div.style.cssText=`width:44px;height:44px;border-radius:6px;border:1px solid ${name?'var(--amber-dim)':'var(--border2)'};background:${name?'rgba(60,40,20,0.9)':'rgba(20,18,30,0.85)'};display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;cursor:${name?'pointer':'default'};pointer-events:all`;
+      div.innerHTML=`<span style="font-size:9px;position:absolute;top:2px;left:3px;color:rgba(255,255,255,0.4)">${'QWER'[i]}</span>${name?`<span style="font-size:19px">${def.icon||'📦'}</span>${def.type==='potion'&&def.hp?`<span style="font-size:8px;color:#4a9e6a;font-weight:700">+${def.hp>=9999?'F':def.hp}</span>`:''}`:'' }`;
+      if(name){div.onclick=()=>{useInnBeltItem(i);updateInnHud();};}
+      slots.appendChild(div);
+    }
+  }
+}
+
+function useInnBeltItem(slot){
+  const itemName=innHotbar[innHotbarRow][slot];if(!itemName||!me)return;
+  const bn=itemName.replace(/ \+\d+$/,'');const def=ITEMS[bn];if(!def)return;
+  if(def.type==='potion'){
+    const mh=maxHp(),healed=Math.min(def.hp||0,mh-me.hp);
+    if(healed<=0){addChatLine('sys','HP가 이미 가득 찼습니다!');return;}
+    me.hp=Math.min(mh,me.hp+(def.hp||0));
+    innHotbar[innHotbarRow][slot]=null;
+    try{localStorage.setItem('belt_'+me.id,JSON.stringify(innHotbar));}catch(e){}
+    updateHpHud();updateInnHud();saveP();
+    addChatLine('heal',`🧪 ${itemName} 사용! HP +${healed}`);
+  }
+}
+
+// Tab키로 벨트 줄 전환 (여관)
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT')return;
+  if(e.key==='Tab'){e.preventDefault();innHotbarRow=innHotbarRow===0?1:0;updateInnHud();}
+});
+
 function enterInn(){
   myPos={x:280+Math.random()*200,y:380+Math.random()*180};
   document.getElementById('loading').style.display='none';
   document.getElementById('login-screen').style.display='none';
   document.getElementById('game-wrap').style.display='flex';
-  resize();updateHpHud();startRegen();loop();
-  swTab('st');  setInterval(saveP,1800);setInterval(presencePoll,2000);setInterval(chatPoll,1400);
+  // 벨트 로드
+  try{const saved=localStorage.getItem('belt_'+me.id);if(saved){const b=JSON.parse(saved);if(Array.isArray(b)&&b.length===2)innHotbar=b;}}catch(e){}
+  resize();updateHpHud();updateInnHud();startRegen();loop();
+  swTab('st');setInterval(saveP,1800);setInterval(presencePoll,2000);setInterval(chatPoll,1400);
   chatPoll();
-  addChatLine('sys',`🍺 여관에 입장했습니다. HP 자동 회복 중...`);
+  addChatLine('sys','🍺 여관에 입장했습니다. HP 자동 회복 중...');
   pushChat({sys:true,text:`${me.username}님이 여관에 들어왔습니다.`});
 }
 
