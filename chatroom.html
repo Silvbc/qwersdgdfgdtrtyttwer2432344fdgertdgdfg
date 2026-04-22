@@ -887,74 +887,101 @@ function innUseItem(idx){
 }
 
 // ── 상점 ──────────────────────────────────────────
-// ── 치료사 모달 ───────────────────────────────────
 function buildHealerHTML(){
   const inv=me.inventory||[];
-  const bigPotionCount=inv.filter(it=>it.name==='큰 물약').length;
-  const canExchange=bigPotionCount>=5;
+  const smallCount=inv.filter(it=>it.name==='작은 물약').length;
+  const bigCount=inv.filter(it=>it.name==='큰 물약').length;
   const elixirCount=inv.filter(it=>it.name==='엘릭서').length;
+  const canSmall=smallCount>=5;
+  const canBig=bigCount>=5;
   return `
-    <div style="text-align:center;padding:12px 0 18px">
-      <div style="font-size:40px;margin-bottom:8px">🧝‍♀️</div>
+    <div style="text-align:center;padding:10px 0 14px">
+      <div style="font-size:38px;margin-bottom:6px">🧝‍♀️</div>
       <div style="font-size:13px;color:var(--text);margin-bottom:6px;font-weight:500">치료사 엘리나</div>
-      <div style="font-size:11px;color:var(--text-dim);line-height:1.7;margin-bottom:16px">
-        "큰 물약 5개를 모아오면<br>더 강력한 <span style="color:#a060ff">엘릭서</span>로 만들어 드릴게요."
+      <div style="font-size:11px;color:var(--text-dim);line-height:1.7;margin-bottom:14px">
+        "물약들을 모아오면 더 좋은 물약으로<br>만들어 드릴게요!"
       </div>
     </div>
 
-    <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px">
-      <div style="font-size:11px;color:var(--text-mute);margin-bottom:10px;letter-spacing:.5px">교환 레시피</div>
-      <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:10px">
+    <!-- 교환 1: 작은 물약 5개 → 큰 물약 1개 -->
+    <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:8px">
         <div style="text-align:center">
-          <div style="font-size:28px">⚗️</div>
-          <div style="font-size:10px;color:var(--text-dim)">큰 물약 × 5</div>
-          <div style="font-size:10px;color:${canExchange?'#4a9e6a':'#c84a4a'};margin-top:2px">보유: ${bigPotionCount}개</div>
+          <div style="font-size:24px">🧪</div>
+          <div style="font-size:10px;color:var(--text-dim)">작은 물약 × 5</div>
+          <div style="font-size:10px;color:${canSmall?'#4a9e6a':'#c84a4a'};margin-top:2px">보유: ${smallCount}개</div>
         </div>
-        <div style="font-size:20px;color:var(--amber)">→</div>
+        <div style="font-size:18px;color:var(--amber)">→</div>
         <div style="text-align:center">
-          <div style="font-size:28px">💎</div>
+          <div style="font-size:24px">⚗️</div>
+          <div style="font-size:10px;color:var(--text-dim)">큰 물약 × 1</div>
+          <div style="font-size:10px;color:var(--text-mute);margin-top:2px">보유: ${bigCount}개</div>
+        </div>
+      </div>
+      <button onclick="exchangeSmall()"
+        style="width:100%;padding:8px;background:${canSmall?'rgba(74,158,106,0.2)':'rgba(40,40,40,0.2)'};
+          border:1px solid ${canSmall?'#4a7e4a':'var(--border)'};border-radius:6px;
+          color:${canSmall?'#4a9e6a':'var(--text-mute)'};font-size:12px;
+          cursor:${canSmall?'pointer':'not-allowed'};font-family:'Noto Sans KR',sans-serif">
+        ${canSmall?'🔄 큰 물약으로 교환':'작은 물약 부족 ('+smallCount+'/5)'}
+      </button>
+    </div>
+
+    <!-- 교환 2: 큰 물약 5개 → 엘릭서 1개 -->
+    <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:8px">
+        <div style="text-align:center">
+          <div style="font-size:24px">⚗️</div>
+          <div style="font-size:10px;color:var(--text-dim)">큰 물약 × 5</div>
+          <div style="font-size:10px;color:${canBig?'#4a9e6a':'#c84a4a'};margin-top:2px">보유: ${bigCount}개</div>
+        </div>
+        <div style="font-size:18px;color:var(--amber)">→</div>
+        <div style="text-align:center">
+          <div style="font-size:24px">💎</div>
           <div style="font-size:10px;color:var(--text-dim)">엘릭서 × 1</div>
           <div style="font-size:10px;color:var(--text-mute);margin-top:2px">보유: ${elixirCount}개</div>
         </div>
       </div>
-      <div style="font-size:10px;color:var(--text-mute);text-align:center;margin-bottom:10px">
-        💎 엘릭서: HP 전체 회복
-      </div>
       <button onclick="exchangePotion()"
-        style="width:100%;padding:10px;background:${canExchange?'linear-gradient(135deg,rgba(160,96,255,0.25),rgba(100,40,200,0.2))':'rgba(40,40,40,0.3)'};
-          border:1px solid ${canExchange?'#8040c0':'var(--border)'};border-radius:8px;
-          color:${canExchange?'#c080ff':'var(--text-mute)'};font-size:13px;font-weight:500;
-          cursor:${canExchange?'pointer':'not-allowed'};font-family:'Noto Sans KR',sans-serif;
-          transition:all .15s">
-        ${canExchange?'✨ 엘릭서로 교환하기':'큰 물약이 부족합니다 ('+bigPotionCount+'/5)'}
+        style="width:100%;padding:8px;background:${canBig?'rgba(160,96,255,0.2)':'rgba(40,40,40,0.2)'};
+          border:1px solid ${canBig?'#8040c0':'var(--border)'};border-radius:6px;
+          color:${canBig?'#c080ff':'var(--text-mute)'};font-size:12px;
+          cursor:${canBig?'pointer':'not-allowed'};font-family:'Noto Sans KR',sans-serif">
+        ${canBig?'✨ 엘릭서로 교환':'큰 물약 부족 ('+bigCount+'/5)'}
       </button>
     </div>
 
     <div style="font-size:10px;color:var(--text-mute);text-align:center;line-height:1.7">
-      교환은 여러 번 할 수 있어요.<br>큰 물약 5개 = 엘릭서 1개
+      작은 물약 5개 → 큰 물약 1개<br>큰 물약 5개 → 엘릭서 1개
     </div>`;
+}
+
+function exchangeSmall(){
+  const inv=me.inventory||[];
+  const smallPotions=inv.filter(it=>it.name==='작은 물약');
+  if(smallPotions.length<5){addChatLine('sys','🧪 작은 물약이 5개 필요합니다!');return;}
+  if(inv.length>=20){addChatLine('sys','인벤토리가 가득 찼습니다!');return;}
+  let removed=0;
+  for(let i=inv.length-1;i>=0&&removed<5;i--){if(inv[i].name==='작은 물약'){inv.splice(i,1);removed++;}}
+  inv.push({name:'큰 물약',id:Date.now()});
+  me.inventory=inv;saveProfile();
+  document.getElementById('modal-body').innerHTML=buildHealerHTML();
+  if(activeTab==='iv')renderIv();
+  addChatLine('heal','✨ 엘리나: 완성됐어요! ⚗️ 큰 물약 1개 획득!');
 }
 
 function exchangePotion(){
   const inv=me.inventory||[];
   const bigPotions=inv.filter(it=>it.name==='큰 물약');
-  if(bigPotions.length<5){
-    addChatLine('sys','⚗️ 큰 물약이 5개 필요합니다!');return;
-  }
-  // 큰 물약 5개 제거
-  let removed=0;
-  for(let i=inv.length-1;i>=0&&removed<5;i--){
-    if(inv[i].name==='큰 물약'){inv.splice(i,1);removed++;}
-  }
-  // 엘릭서 추가
+  if(bigPotions.length<5){addChatLine('sys','⚗️ 큰 물약이 5개 필요합니다!');return;}
   if(inv.length>=20){addChatLine('sys','인벤토리가 가득 찼습니다!');return;}
+  let removed=0;
+  for(let i=inv.length-1;i>=0&&removed<5;i--){if(inv[i].name==='큰 물약'){inv.splice(i,1);removed++;}}
   inv.push({name:'엘릭서',id:Date.now()});
-  me.inventory=inv;
-  saveProfile();
-  // 모달 갱신
+  me.inventory=inv;saveProfile();
   document.getElementById('modal-body').innerHTML=buildHealerHTML();
   if(activeTab==='iv')renderIv();
-  addChatLine('heal','✨ 치료사 엘리나: 완성됐어요! 💎 엘릭서 1개 획득!');
+  addChatLine('heal','✨ 엘리나: 완성됐어요! 💎 엘릭서 1개 획득!');
 }
 
 function buildShopHTML(){
