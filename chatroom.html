@@ -326,6 +326,8 @@ const ents=document.getElementById('ents');
 
 function resize(){const c=document.getElementById('pub-container');canvas.width=c.clientWidth;canvas.height=c.clientHeight;}
 window.addEventListener('resize',resize);
+// 우클릭 컨텍스트 메뉴 전체 차단
+document.addEventListener('contextmenu',e=>{e.preventDefault();});
 function nc(u){if(!u)return'#a07840';let h=0;for(const c of u)h=(h*31+c.charCodeAt(0))%NC.length;return NC[h];}
 
 // ── 스탯 계산 ─────────────────────────────────────
