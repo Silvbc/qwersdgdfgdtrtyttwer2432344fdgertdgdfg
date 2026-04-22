@@ -21,19 +21,39 @@ const ZONE={
 let currentZone=ZONE.WORLD;
 
 // ── 몬스터 정의 ────────────────────────────────────
-const MON_VILLAGE=[];  // 마을엔 몬스터 없음
-const MON_FOREST=[
-  {name:'늑대',      icon:'🐺',hp:70, maxHp:70, atk:[8,15], exp:40, gold:15,spd:1.2,lootChance:0.35,size:1},
-  {name:'좀비',      icon:'🧟',hp:90, maxHp:90, atk:[10,18],exp:50, gold:18,spd:0.7,lootChance:0.40,size:1},
-  {name:'해골',      icon:'💀',hp:80, maxHp:80, atk:[12,20],exp:55, gold:20,spd:1.0,lootChance:0.40,size:1},
-  {name:'늑대인간',  icon:'🐗',hp:130,maxHp:130,atk:[18,28],exp:80, gold:35,spd:1.3,lootChance:0.50,size:1},
-  {name:'거대거미',  icon:'🕷️',hp:110,maxHp:110,atk:[15,24],exp:70, gold:30,spd:0.9,lootChance:0.50,size:1},
-];
-const MON_FOREST_BOSS=[
-  {name:'늑대인간 대장',  icon:'🦁',hp:500, maxHp:500, atk:[30,50],exp:400,gold:200,spd:1.1,lootChance:1.0,size:2,boss:true},
-  {name:'거대거미 대장',  icon:'🕸️',hp:450, maxHp:450, atk:[28,45],exp:380,gold:180,spd:0.8,lootChance:1.0,size:2,boss:true},
-  {name:'해골기사',       icon:'☠️',hp:600, maxHp:600, atk:[35,55],exp:500,gold:250,spd:0.9,lootChance:1.0,size:2,boss:true},
-];
+const MON_VILLAGE=[];
+
+// 숲 6구역 몬스터 정의
+const MON_ZONES={
+  wolf:[  // 구역1: 늑대 구역
+    {name:'늑대',      icon:'🐺',hp:70, maxHp:70, atk:[8,15], exp:40, gold:15,spd:1.2,lootChance:0.35,size:1,zone:'wolf'},
+    {name:'늑대인간',  icon:'🐗',hp:130,maxHp:130,atk:[18,28],exp:80, gold:35,spd:1.3,lootChance:0.50,size:1,zone:'wolf'},
+    {name:'늑대인간 대장',icon:'🦁',hp:500,maxHp:500,atk:[30,50],exp:400,gold:200,spd:1.1,lootChance:1.0,size:2,boss:true,zone:'wolf'},
+  ],
+  spider:[  // 구역2: 거미 구역
+    {name:'거대거미',  icon:'🕷️',hp:110,maxHp:110,atk:[15,24],exp:70, gold:30,spd:0.9,lootChance:0.50,size:1,zone:'spider'},
+    {name:'거대거미 대장',icon:'🕸️',hp:450,maxHp:450,atk:[28,45],exp:380,gold:180,spd:0.8,lootChance:1.0,size:2,boss:true,zone:'spider'},
+  ],
+  skull:[  // 구역3: 해골 구역
+    {name:'해골',      icon:'💀',hp:80, maxHp:80, atk:[12,20],exp:55, gold:20,spd:1.0,lootChance:0.40,size:1,zone:'skull'},
+    {name:'해골기사',  icon:'☠️',hp:600,maxHp:600,atk:[35,55],exp:500,gold:250,spd:0.9,lootChance:1.0,size:2,boss:true,zone:'skull'},
+  ],
+  orc:[  // 구역4: 오크 구역
+    {name:'오크',      icon:'👹',hp:120,maxHp:120,atk:[14,24],exp:70, gold:28,spd:0.8,lootChance:0.45,size:1,zone:'orc'},
+    {name:'오크 대장', icon:'🗿',hp:550,maxHp:550,atk:[32,52],exp:420,gold:210,spd:0.7,lootChance:1.0,size:2,boss:true,zone:'orc'},
+  ],
+  goblin:[  // 구역5: 고블린 구역
+    {name:'고블린',    icon:'👺',hp:60, maxHp:60, atk:[8,14], exp:35, gold:18,spd:1.0,lootChance:0.40,size:1,zone:'goblin'},
+    {name:'코볼트',    icon:'🦎',hp:85, maxHp:85, atk:[11,19],exp:52, gold:22,spd:1.2,lootChance:0.45,size:1,zone:'goblin'},
+    {name:'고블린 대장',icon:'😤',hp:400,maxHp:400,atk:[26,42],exp:360,gold:170,spd:1.0,lootChance:1.0,size:2,boss:true,zone:'goblin'},
+    {name:'코볼트 대장',icon:'🦖',hp:480,maxHp:480,atk:[29,46],exp:390,gold:185,spd:1.1,lootChance:1.0,size:2,boss:true,zone:'goblin'},
+  ],
+  ogre:[  // 구역6: 오우거 구역
+    {name:'오우거',    icon:'👾',hp:200,maxHp:200,atk:[22,36],exp:130,gold:55,spd:0.6,lootChance:0.55,size:1,zone:'ogre'},
+    {name:'오우거 대장',icon:'🧌',hp:700,maxHp:700,atk:[40,65],exp:600,gold:300,spd:0.6,lootChance:1.0,size:2,boss:true,zone:'ogre'},
+  ],
+};
+
 const MON_D1=[
   {name:'슬라임',   icon:'🟢',hp:40, maxHp:40, atk:[5,10], exp:20,gold:10,spd:0.8,lootChance:0.30,size:1},
   {name:'고블린',   icon:'👺',hp:60, maxHp:60, atk:[8,14], exp:35,gold:18,spd:1.0,lootChance:0.40,size:1},
@@ -96,25 +116,37 @@ function isStackable(name){
   const bn=name.replace(/ \+\d+$/,'');
   const def=ITEMS[bn];
   if(!def)return false;
-  // 장비, 엘릭서, 버프는 중첩 불가
-  if(def.type==='weapon'||def.type==='armor'||def.type==='bag')return false;
-  if(name==='엘릭서'||def.type==='buff')return false;
-  // 재료, 작은/큰 물약은 중첩 가능
+  // 장비류와 버프만 중첩 불가
+  if(def.type==='weapon'||def.type==='armor'||def.type==='bag'||def.type==='buff')return false;
+  // 물약(작은/큰/엘릭서), 재료 모두 중첩 가능
   return true;
 }
+const MAX_STACK=5;
 
 // 중첩 인벤에 아이템 추가
 function addToInventory(itemName, count=1){
   const inv=me.inventory||[];
   const max=maxInvSize();
+  let remaining=count;
   if(isStackable(itemName)){
-    // 기존 스택 찾기
-    const existing=inv.find(it=>it.name===itemName);
-    if(existing){existing.count=(existing.count||1)+count;me.inventory=inv;return true;}
+    // 기존 스택에 채우기
+    for(const slot of inv){
+      if(slot.name!==itemName)continue;
+      const space=MAX_STACK-(slot.count||1);
+      if(space<=0)continue;
+      const add=Math.min(remaining,space);
+      slot.count=(slot.count||1)+add;
+      remaining-=add;
+      if(remaining<=0){me.inventory=inv;return true;}
+    }
   }
-  // 새 슬롯
-  if(inv.length>=max)return false;
-  inv.push({name:itemName,id:Date.now(),count:isStackable(itemName)?count:1});
+  // 남은 수량을 새 슬롯에
+  while(remaining>0){
+    if(inv.length>=max){me.inventory=inv;return false;}
+    const add=isStackable(itemName)?Math.min(remaining,MAX_STACK):1;
+    inv.push({name:itemName,id:Date.now()+remaining,count:add});
+    remaining-=add;
+  }
   me.inventory=inv;return true;
 }
 
@@ -516,8 +548,17 @@ function drawHotbar(){
   ctx.fillStyle='#e8e0d0';ctx.font='bold 11px Noto Sans KR,sans-serif';ctx.textAlign='center';
   ctx.fillText(`❤️ ${me.hp} / ${mh}`,barX+barW/2,barY+11);
 
-  // 버프 활성 표시
-  if(buffActive&&Date.now()<buffEndTime){
+  // 자동 공격 표시
+  if(autoAttackId&&monsters[autoAttackId]?.alive){
+    const m=monsters[autoAttackId];
+    ctx.save();
+    ctx.fillStyle='rgba(220,60,60,0.88)';
+    ctx.beginPath();if(ctx.roundRect)ctx.roundRect(barX-6,barY-32,barW+12,20,6);else ctx.rect(barX-6,barY-32,barW+12,20);
+    ctx.fill();
+    ctx.fillStyle='#ffe0e0';ctx.font='bold 11px Noto Sans KR,sans-serif';ctx.textAlign='center';
+    ctx.fillText(`🔒 자동 공격: ${m.icon} ${m.name}  (다른 곳 클릭 시 해제)`,barX+barW/2,barY-18);
+    ctx.restore();
+  } else if(buffActive&&Date.now()<buffEndTime){
     const remain=Math.ceil((buffEndTime-Date.now())/1000);
     const mins=Math.floor(remain/60),secs=remain%60;
     ctx.save();
@@ -653,13 +694,73 @@ cv.addEventListener('mousemove',e=>{
 });
 cv.addEventListener('mouseleave',()=>setCursor('default'));
 
+// ── 우클릭 아이템 획득 ────────────────────────────
+let rightHoldTimer=null;
+let rightHoldActive=false;
+
+// 우클릭 방지 (기본 컨텍스트 메뉴 차단)
+cv.addEventListener('contextmenu',e=>{e.preventDefault();});
+
+cv.addEventListener('mousedown',e=>{
+  if(e.button!==2||!me)return;
+  e.preventDefault();
+  const rect=cv.getBoundingClientRect();
+  const wx=(e.clientX-rect.left)+cam.x,wy=(e.clientY-rect.top)+cam.y;
+  // 즉시 클릭: 가장 가까운 드랍 획득
+  let picked=tryPickupNearPos(wx,wy,60);
+  // 길게 누르기 시작
+  rightHoldActive=true;
+  rightHoldTimer=setInterval(()=>{
+    if(!rightHoldActive||!me)return;
+    // 내 현재 위치 근처 랜덤 드랍 획득
+    tryPickupNearPos(myPos.x,myPos.y,120,true);
+  },600);
+});
+
+cv.addEventListener('mouseup',e=>{
+  if(e.button!==2)return;
+  rightHoldActive=false;
+  if(rightHoldTimer){clearInterval(rightHoldTimer);rightHoldTimer=null;}
+});
+
+function tryPickupNearPos(wx,wy,range,random=false){
+  const nearby=Object.entries(drops).filter(([id,d])=>dist({x:d.x,y:d.y},{x:wx,y:wy})<range);
+  if(!nearby.length)return false;
+  let target;
+  if(random) target=nearby[Math.floor(Math.random()*nearby.length)];
+  else target=nearby.sort((a,b)=>dist({x:b[1].x,y:b[1].y},{x:wx,y:wy})-dist({x:a[1].x,y:a[1].y},{x:wx,y:wy}))[nearby.length-1]; // 가장 가까운 것
+  const[id,drop]=target;
+  doPickup(id,drop);
+  return true;
+}
+
 // ── 캐릭터 DOM ─────────────────────────────────────
 function getOrMakeChar(id,data){let e=document.getElementById('ch-'+id);if(!e){e=document.createElement('div');e.id='ch-'+id;e.className='ce';e.style.pointerEvents='none';e.innerHTML=makeHumanSVG(data.cls||'전사',id===me?.id)+`<div class="chw"><div class="chb" id="chb-${id}"></div></div><div class="cn2" style="color:${ncol(data.username)}">${data.username}${id===me?.id?' ⭐':''}</div>`;elLayer.appendChild(e);}return e;}
 function placeChar(id,data){const e=getOrMakeChar(id,data);const s=w2s(data.x,data.y);e.style.left=s.x+'px';e.style.top=s.y+'px';e.style.transform='translate(-50%,-60%)';const hb=document.getElementById('chb-'+id);if(hb){const p=clamp((data.hp/(data.maxHp||100))*100,0,100);hb.style.width=p+'%';hb.style.background=p>50?'#4a9e6a':p>25?'#c8874a':'#c84a4a';}}
 function remChar(id){const e=document.getElementById('ch-'+id);if(e)e.remove();}
 
 // ── 몬스터 DOM ─────────────────────────────────────
-function getOrMakeMon(id,m){let e=document.getElementById('mn-'+id);if(!e){e=document.createElement('div');e.id='mn-'+id;e.className='me2';e.style.pointerEvents='all';e.style.cursor=SWORD_CURSOR;const sz=m.size||1;const fontSize=sz===3?36:sz===2?28:22;e.innerHTML=`<div class="ms" id="msp-${id}" style="font-size:${fontSize}px">${m.icon}</div><div class="mhw" style="width:${40+sz*10}px"><div class="mhf" id="mhp-${id}" style="width:100%"></div></div><div class="mnl${m.boss?' boss-lbl':''}">${m.name}${m.boss?' 👑':''}</div>`;e.addEventListener('click',ev=>{ev.stopPropagation();attackMon(id);});e.addEventListener('mouseenter',()=>setCursor('sword'));e.addEventListener('mouseleave',()=>setCursor('default'));elLayer.appendChild(e);}return e;}
+function getOrMakeMon(id,m){
+  let e=document.getElementById('mn-'+id);
+  if(!e){
+    e=document.createElement('div');e.id='mn-'+id;e.className='me2';
+    e.style.pointerEvents='all';e.style.cursor=SWORD_CURSOR;
+    const sz=m.size||1;const fontSize=sz===3?36:sz===2?28:22;
+    e.innerHTML=`<div class="ms" id="msp-${id}" style="font-size:${fontSize}px">${m.icon}</div><div class="mhw" style="width:${40+sz*10}px"><div class="mhf" id="mhp-${id}" style="width:100%"></div></div><div class="mnl${m.boss?' boss-lbl':''}">${m.name}${m.boss?' 👑':''}</div>`;
+    // 단일 클릭: 한 번 공격
+    e.addEventListener('click',ev=>{ev.stopPropagation();attackMon(id);});
+    // 더블클릭: 자동 공격 토글
+    e.addEventListener('dblclick',ev=>{
+      ev.stopPropagation();
+      if(autoAttackId===id){stopAutoAttack();addLine({cls:'sy',text:'🔓 자동 공격 해제'});}
+      else startAutoAttack(id);
+    });
+    e.addEventListener('mouseenter',()=>setCursor('sword'));
+    e.addEventListener('mouseleave',()=>setCursor('default'));
+    elLayer.appendChild(e);
+  }
+  return e;
+}
 function placeMon(id,m){if(!m.alive){const e=document.getElementById('mn-'+id);if(e)e.remove();return;}const e=getOrMakeMon(id,m);const s=w2s(m.x,m.y);e.style.left=s.x+'px';e.style.top=s.y+'px';e.style.transform='translate(-50%,-50%)';e.style.zIndex=Math.floor(m.y);const p=clamp((m.hp/m.maxHp)*100,0,100);const hb=document.getElementById('mhp-'+id);if(hb){hb.style.width=p+'%';hb.style.background=p>50?'#c84a4a':p>25?'#c8874a':'#e06060';}}
 function remMon(id){const e=document.getElementById('mn-'+id);if(e)e.remove();}
 
@@ -700,33 +801,69 @@ function checkPortals(){
     if(dist({x:mouseWX,y:mouseWY},{x:300+60,y:300+60})<55&&cv.onclick){}
     // 던전 입구
     const d=PORTALS.DUNGEON;
-    if(dist(myPos,{x:d.x+d.w/2,y:d.y+d.h/2})<50){portalCool=true;changeZone(ZONE.D1,ZONE.WORLD);setTimeout(()=>portalCool=false,1500);return;}
+    if(dist(myPos,{x:d.x+d.w/2,y:d.y+d.h/2})<50){portalCool=true;changeZone(ZONE.D1,ZONE.WORLD,'up');setTimeout(()=>portalCool=false,1500);return;}
   } else {
     // 던전 계단
     let upX,downX;
     if(currentZone===ZONE.D1){upX=2300;downX=120;}
     else if(currentZone===ZONE.D2){upX=2300;downX=120;}
     else{upX=null;downX=120;}
-    if(upX&&dist(myPos,{x:upX,y:700})<45){portalCool=true;changeZone(currentZone===ZONE.D1?ZONE.D2:ZONE.D3,currentZone);setTimeout(()=>portalCool=false,1500);return;}
-    if(dist(myPos,{x:downX,y:700})<45){portalCool=true;changeZone(currentZone===ZONE.D1?ZONE.WORLD:currentZone===ZONE.D2?ZONE.D1:ZONE.D2,currentZone);setTimeout(()=>portalCool=false,1500);return;}
+    // 위 계단 (오른쪽, 다음 층으로)
+    if(upX&&dist(myPos,{x:upX,y:700})<45){
+      portalCool=true;
+      changeZone(currentZone===ZONE.D1?ZONE.D2:ZONE.D3, currentZone,'up');
+      setTimeout(()=>portalCool=false,1500);return;
+    }
+    // 아래 계단 (왼쪽, 이전 층으로)
+    if(dist(myPos,{x:downX,y:700})<45){
+      portalCool=true;
+      const destZone=currentZone===ZONE.D1?ZONE.WORLD:currentZone===ZONE.D2?ZONE.D1:ZONE.D2;
+      changeZone(destZone, currentZone,'down');
+      setTimeout(()=>portalCool=false,1500);return;
+    }
   }
 }
 
-function changeZone(zone,fromZone){
+function changeZone(zone, fromZone, direction){
+  // direction: 'up'(올라감) or 'down'(내려감)
   currentZone=zone;
   Object.keys(monsters).forEach(id=>remMon(id));monsters={};
   Object.keys(drops).forEach(id=>remDrop(id));drops={};
   spawnMonsters();
-  // 시작 위치
+
   if(zone===ZONE.WORLD){
-    // 던전에서 나오면 던전 입구 앞에 스폰
-    if(fromZone===ZONE.D1)myPos=safeSpawn(PORTALS.DUNGEON.x-80, PORTALS.DUNGEON.y, 60);
-    else myPos=safeSpawn(280,600,80); // 여관에서 나올 때는 마을 중심
+    // 던전 1층에서 나가기 → 던전 입구 앞
+    myPos=safeSpawn(PORTALS.DUNGEON.x-80, PORTALS.DUNGEON.y, 60);
   }
-  else if(zone===ZONE.D1)myPos=safeSpawn(200,700,80);
-  else if(zone===ZONE.D2)myPos=safeSpawn(200,700,80);
-  else if(zone===ZONE.D3)myPos=safeSpawn(400,700,80);
-  const msgs={[ZONE.WORLD]:'🏘️ 마을으로 돌아왔습니다.',[ZONE.D1]:'🏰 던전 1층 입장!',[ZONE.D2]:'👿 던전 2층! 더 강한 몬스터입니다.',[ZONE.D3]:'💀 던전 3층! 보스가 기다립니다!'};
+  else if(zone===ZONE.D1){
+    if(direction==='down'){
+      // 2층 왼쪽 출구 → 1층 오른쪽 위 계단(2300,700) 근처에서 등장
+      myPos=safeSpawn(2250,700,60);
+    } else {
+      // 월드에서 들어올 때 → 왼쪽(200,700)
+      myPos=safeSpawn(200,700,80);
+    }
+  }
+  else if(zone===ZONE.D2){
+    if(direction==='down'){
+      // 3층 왼쪽 출구 → 2층 오른쪽 위 계단(2300,700) 근처에서 등장
+      myPos=safeSpawn(2250,700,60);
+    } else {
+      // 1층에서 올라올 때 → 왼쪽(200,700)
+      myPos=safeSpawn(200,700,80);
+    }
+  }
+  else if(zone===ZONE.D3){
+    // 항상 왼쪽에서 등장
+    myPos=safeSpawn(400,700,80);
+  }
+
+  const msgs={
+    [ZONE.WORLD]:'🏘️ 마을으로 돌아왔습니다.',
+    [ZONE.D1]:direction==='down'?'🏰 던전 1층 (위 계단 근처)':'🏰 던전 1층 입장!',
+    [ZONE.D2]:direction==='down'?'👿 던전 2층 (위 계단 근처)':'👿 던전 2층!',
+    [ZONE.D3]:'💀 던전 3층! 보스가 기다립니다!',
+  };
   addLine({cls:'sy',text:msgs[zone]||''});
 }
 
@@ -752,7 +889,13 @@ function monAI(){
   }
 }
 
-function doRespawn(){addLine({cls:'bt',text:'💀 쓰러졌습니다! 여관으로 이송됩니다...'});me.hp=Math.round(myMaxHp()*0.5);saveProfile();setTimeout(()=>window.location.href='chatroom.html?respawn=1',2000);}
+function doRespawn(){
+  addLine({cls:'bt',text:'💀 쓰러졌습니다! 여관으로 이송됩니다...'});
+  me.hp=Math.round(myMaxHp()*0.5);
+  // 벨트 아이템 유지 - 인벤토리에 돌려놓지 않고 그대로 보존
+  saveProfile();
+  setTimeout(()=>window.location.href='chatroom.html?respawn=1',2000);
+}
 
 // ── 전투 ──────────────────────────────────────────
 function attackMon(id){const m=monsters[id];if(!m||!m.alive)return;if(dist(m,myPos)>150){myTarget={x:m.x,y:m.y};setTimeout(()=>doHit(id),1000);}else doHit(id);}
@@ -770,6 +913,8 @@ function doHit(id){
 
 async function killMon(id,m){
   m.alive=false;remMon(id);
+  // 자동 공격 대상이 죽으면 해제
+  if(autoAttackId===id){stopAutoAttack();addLine({cls:'sy',text:'🔓 자동 공격 대상 처치 완료!'});}
   me.exp=(me.exp||0)+m.exp;me.gold=(me.gold||0)+m.gold;me.kills=(me.kills||0)+1;
   const s=w2s(m.x,m.y);floatTxt('+'+m.exp+'xp',s.x-10,s.y-20,'x');floatTxt('+'+m.gold+'G',s.x+10,s.y-36,'g');
   addLine({cls:'lt',text:`🎉 ${m.icon}${m.name} 처치! +${m.exp}XP +${m.gold}G`});
@@ -797,10 +942,13 @@ function getLootTable(){
   return LOOT_D3;
 }
 function getMonDefs(){
-  if(currentZone===ZONE.WORLD)return MON_FOREST;
+  if(currentZone===ZONE.WORLD){
+    // 모든 숲 구역의 일반 몬스터 합치기
+    return Object.values(MON_ZONES).flatMap(z=>z.filter(m=>!m.boss));
+  }
   if(currentZone===ZONE.D1)return MON_D1;
   if(currentZone===ZONE.D2)return MON_D2;
-  return[];
+  return [];
 }
 function rollLoot(table){let r=Math.random(),acc=0;for(const[n,c]of table){acc+=c;if(r<acc)return n;}return null;}
 
@@ -830,17 +978,40 @@ function doPickup(id,drop){
 // ── 스폰 ──────────────────────────────────────────
 function spawnMonsters(){
   if(currentZone===ZONE.WORLD){
-    // 숲 구역 (맵 오른쪽)
-    const forestPositions=[];
-    for(let x=1300;x<2100;x+=200)for(let y=200;y<1200;y+=200)forestPositions.push([x,y]);
-    forestPositions.forEach((pos,i)=>{
-      const def=MON_FOREST[i%MON_FOREST.length];const sp=safeSpawn(pos[0],pos[1],80);
-      monsters['f'+i]={...def,id:'f'+i,alive:true,hp:def.hp,maxHp:def.hp,x:sp.x,y:sp.y};
-    });
-    // 숲 보스 (고정 위치)
-    [[1600,400],[1800,800],[2000,600]].forEach((pos,i)=>{
-      const def=MON_FOREST_BOSS[i];const sp=safeSpawn(pos[0],pos[1],50);
-      monsters['fb'+i]={...def,id:'fb'+i,alive:true,hp:def.hp,maxHp:def.hp,x:sp.x,y:sp.y};
+    // 숲을 6개 수직 구역으로 분할 (x축 기준)
+    // 전체 숲: x 1200~2200, y 100~1300
+    // 구역 너비: 약 170px 씩
+    const zones=[
+      {key:'wolf',   x1:1200,x2:1365, label:'🐺 늑대 구역'},
+      {key:'spider', x1:1365,x2:1530, label:'🕷️ 거미 구역'},
+      {key:'skull',  x1:1530,x2:1695, label:'💀 해골 구역'},
+      {key:'orc',    x1:1695,x2:1860, label:'👹 오크 구역'},
+      {key:'goblin', x1:1860,x2:2030, label:'👺 고블린 구역'},
+      {key:'ogre',   x1:2030,x2:2200, label:'👾 오우거 구역'},
+    ];
+    zones.forEach((zone,zi)=>{
+      const mons=MON_ZONES[zone.key];
+      const normals=mons.filter(m=>!m.boss);
+      const bosses=mons.filter(m=>m.boss);
+      const cx=(zone.x1+zone.x2)/2;
+      // 일반 몬스터 배치 (구역 안에 고르게)
+      const rows=3,cols=3;
+      normals.forEach((def,i)=>{
+        for(let r=0;r<rows;r++){
+          const x=zone.x1+40+(zone.x2-zone.x1-80)*((i%cols+Math.random()*0.4)/cols);
+          const y=200+r*(1000/rows)+Math.random()*60;
+          const sp=safeSpawn(Math.min(Math.max(x,zone.x1+30),zone.x2-30),Math.min(Math.max(y,150),1250),50);
+          const id=`z${zi}_${def.name}_${r}`;
+          monsters[id]={...def,id,alive:true,hp:def.hp,maxHp:def.hp,x:sp.x,y:sp.y};
+        }
+      });
+      // 보스 배치 (구역 중앙 하단)
+      bosses.forEach((def,i)=>{
+        const x=cx+(i-(bosses.length-1)/2)*120;
+        const sp=safeSpawn(Math.min(Math.max(x,zone.x1+40),zone.x2-40),900+i*80,60);
+        const id=`z${zi}_boss_${i}`;
+        monsters[id]={...def,id,alive:true,hp:def.hp,maxHp:def.hp,x:sp.x,y:sp.y};
+      });
     });
   } else if(currentZone===ZONE.D1){
     const pos=[[400,300],[700,300],[1100,300],[1500,300],[400,700],[700,700],[1100,700],[1500,700],[400,1100],[700,1100],[1100,1100],[1500,1100]];
@@ -849,7 +1020,6 @@ function spawnMonsters(){
     const pos=[[400,300],[700,300],[1100,300],[1500,300],[400,700],[700,700],[1100,700],[1500,700],[400,1100],[700,1100]];
     pos.forEach((p,i)=>{const def=MON_D2[i%MON_D2.length];const sp=safeSpawn(p[0],p[1],60);monsters['m'+i]={...def,id:'m'+i,alive:true,hp:def.hp,maxHp:def.hp,x:sp.x,y:sp.y};});
   } else if(currentZone===ZONE.D3){
-    // 3층: 보스 3마리만
     [[600,700],[1200,700],[1800,700]].forEach((pos,i)=>{
       const def=MON_D3_BOSS[i];const sp=safeSpawn(pos[0],pos[1],60);
       monsters['boss'+i]={...def,id:'boss'+i,alive:true,hp:def.hp,maxHp:def.hp,x:sp.x,y:sp.y};
@@ -857,7 +1027,31 @@ function spawnMonsters(){
   }
 }
 
-// ── 마을 NPC 모달 ─────────────────────────────────
+// ── 자동 공격 ─────────────────────────────────────
+let autoAttackId=null;   // 현재 자동 공격 대상 몬스터 id
+let autoAttackTimer=null;
+
+function startAutoAttack(id){
+  if(autoAttackId===id)return; // 이미 같은 대상
+  stopAutoAttack();
+  autoAttackId=id;
+  const m=monsters[id];if(!m||!m.alive)return;
+  addLine({cls:'sy',text:`🔒 ${m.name} 자동 공격 시작! (다른 곳 클릭 시 해제)`});
+  doAutoAttackTick();
+}
+
+function stopAutoAttack(){
+  if(autoAttackTimer){clearTimeout(autoAttackTimer);autoAttackTimer=null;}
+  autoAttackId=null;
+}
+
+function doAutoAttackTick(){
+  if(!autoAttackId){return;}
+  const m=monsters[autoAttackId];
+  if(!m||!m.alive){stopAutoAttack();return;}
+  attackMon(autoAttackId);
+  autoAttackTimer=setTimeout(doAutoAttackTick,myAtkInterval()+200);
+}
 let villageModalOpen=false;
 
 function openVillageModal(type){
@@ -1016,7 +1210,7 @@ function buildVillageCraftHTML(){
 
 // 마을 상인 구매/판매
 function villageBuy(i){const s=SHOP_LIST[i];if(!s)return;if((me.gold||0)<s.price){addLine({cls:'sy',text:'💰 금화 부족!'});return;}const ok=addToInventory(s.name,1);if(!ok){addLine({cls:'sy',text:`인벤토리 가득! (최대 ${maxInvSize()}칸)`});return;}me.gold-=s.price;saveProfile();document.getElementById('vmodal-body').innerHTML=buildVillageShopHTML();addLine({cls:'lt',text:`🛒 ${ITEMS[s.name]?.icon||''}${s.name} 구매! (-${s.price}G)`});}
-function villageSell(idx){const inv=me.inventory||[];const item=inv[idx];if(!item)return;const bn=item.name.replace(/ \+\d+$/,'');const it=ITEMS[bn]||{};const sp=Math.max(5,Math.floor((it.atk||0)*3+(it.def||0)*5+(it.hp||0)*0.3+(it.slots||0)*5));const cnt=item.count||1;me.gold=(me.gold||0)+sp*cnt;inv.splice(idx,1);me.inventory=inv;saveProfile();document.getElementById('vmodal-body').innerHTML=buildVillageShopHTML();addLine({cls:'lt',text:`💰 ${item.name}${cnt>1?` ×${cnt}`:''} 판매! (+${sp*cnt}G)`});}
+function villageSell(idx){const inv=me.inventory||[];const item=inv[idx];if(!item)return;const bn=item.name.replace(/ \+\d+$/,'');const it=ITEMS[bn]||{};const sp=Math.max(5,Math.floor((it.atk||0)*3+(it.def||0)*5+(it.hp||0)*0.3+(it.slots||0)*5));const cnt=item.count||1;me.gold=(me.gold||0)+sp*cnt;inv.splice(idx,1);me.inventory=inv;saveProfile();document.getElementById('vmodal-body').innerHTML=buildVillageShopHTML();if(activeTab==='iv')renderIv();addLine({cls:'lt',text:`💰 ${item.name}${cnt>1?` ×${cnt}`:''} 판매! (+${sp*cnt}G)`});}
 
 // 마을 대장간 강화
 function villageForge(entryIdx){
@@ -1073,7 +1267,11 @@ cv.addEventListener('click',e=>{
     openVillageModal('blacksmith');
     addLine({cls:'sy',text:'🔨 대장장이 보르그: 뭘 만들거나 강화해드릴까요?'});return;
   }
-  if(walkable(wx,wy))myTarget={x:wx,y:wy};
+  // 바닥 클릭 → 이동 + 자동공격 해제
+  if(walkable(wx,wy)){
+    if(autoAttackId){stopAutoAttack();addLine({cls:'sy',text:'🔓 자동 공격 해제'});}
+    myTarget={x:wx,y:wy};
+  }
 });
 
 // ── 탭 ────────────────────────────────────────────
@@ -1140,10 +1338,14 @@ function renderIv(){
   const inv=me.inventory||[];
   const maxSlots=maxInvSize();
   const hasBag=!!(me.equipped?.bag);
-  const cols=hasBag?5:4; // 가방 있으면 5열
-  let h=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-    <span style="font-size:11px;color:var(--text-dim)">${inv.length}/${maxSlots}칸 사용 중</span>
-    ${hasBag?`<span style="font-size:10px;color:var(--amber)">🎒 ${me.equipped.bag} 착용</span>`:'<span style="font-size:10px;color:var(--text-mute)">가방 없음 (20칸)</span>'}
+  const cols=hasBag?5:4;
+  let h=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+    <span style="font-size:11px;color:var(--text-dim)">${inv.length}/${maxSlots}칸</span>
+    ${hasBag?`<span style="font-size:10px;color:var(--amber)">🎒 ${me.equipped.bag}</span>`:'<span style="font-size:10px;color:var(--text-mute)">가방 없음 (20칸)</span>'}
+  </div>
+  <div style="background:rgba(200,168,74,0.1);border:1px solid var(--gold-dim);border-radius:6px;padding:5px 10px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
+    <span style="font-size:11px;color:var(--text-mute)">보유 골드</span>
+    <span style="font-size:13px;font-weight:600;color:var(--gold)">💰 ${(me.gold||0).toLocaleString()}G</span>
   </div>
   <div style="font-size:10px;color:var(--text-mute);margin-bottom:6px">우클릭: 벨트 등록</div>
   <div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:4px">`;
@@ -1220,17 +1422,17 @@ function buyItem(i){
   const ok=addToInventory(s.name,1);
   if(!ok){addLine({cls:'sy',text:`인벤토리가 가득 찼습니다! (최대 ${maxInvSize()}칸)`});return;}
   me.gold-=s.price;saveProfile();renderSh();
+  if(activeTab==='iv')renderIv();
   addLine({cls:'lt',text:`🛒 ${ITEMS[s.name]?.icon||''}${s.name} 구매! (-${s.price}G)`});
 }
 function sellItem(idx){
   const inv=me.inventory||[];const item=inv[idx];if(!item)return;
   const bn=item.name.replace(/ \+\d+$/,'');const it=ITEMS[bn]||{};
   const sp=Math.max(5,Math.floor((it.atk||0)*3+(it.def||0)*5+(it.hp||0)*0.3+(it.slots||0)*5));
-  const cnt=item.count||1;
-  const totalSp=sp*cnt;
+  const cnt=item.count||1;const totalSp=sp*cnt;
   me.gold=(me.gold||0)+totalSp;
   inv.splice(idx,1);me.inventory=inv;
-  saveProfile();renderSh();
+  saveProfile();renderSh();renderIv(); // 인벤토리 실시간 갱신
   addLine({cls:'lt',text:`💰 ${item.name}${cnt>1?` ×${cnt}`:''} 판매! (+${totalSp}G)`});
 }
 
@@ -1356,7 +1558,26 @@ function showTip(e,name){const bn=name.replace(/ \+\d+$/,'');const lv=name.match
 function hideTip(){document.getElementById('tt').style.display='none';}
 
 // ── 네트워크 ──────────────────────────────────────
-async function saveProfile(){if(!me)return;try{await db.from('profiles').update({hp:me.hp,gold:me.gold||0,level:me.level,kills:me.kills||0,exp:me.exp||0,inventory:me.inventory||[],equipped:me.equipped||{},defense:myDef()}).eq('id',me.id);}catch(e){console.error('save:',e);}}
+async function saveProfile(){
+  if(!me)return;
+  try{localStorage.setItem('belt_'+me.id,JSON.stringify(hotbar));}catch(e){}
+  try{await db.from('profiles').update({hp:me.hp,gold:me.gold||0,level:me.level,kills:me.kills||0,exp:me.exp||0,inventory:me.inventory||[],equipped:me.equipped||{},defense:myDef()}).eq('id',me.id);}catch(e){console.error('save:',e);}
+}
+
+async function enterGame(uid,username){
+  const{data:p}=await db.from('profiles').select('*').eq('id',uid).single();
+  if(p){me={...p,inventory:p.inventory||[],equipped:p.equipped||{},level:p.level||1,exp:p.exp||0,gold:p.gold||0,kills:p.kills||0};me.maxHp=myMaxHp();me.hp=Math.min(me.hp,me.maxHp);}
+  else{me={id:uid,username,cls:'전사',hp:120,maxHp:120,gold:0,level:1,kills:0,exp:0,inventory:[],equipped:{}};await db.from('profiles').insert({id:uid,username,cls:'전사',hp:120,maxHp:120,level:1,exp:0,gold:0,kills:0}).catch(()=>{});}
+  // 벨트 로드 (localStorage)
+  try{const saved=localStorage.getItem('belt_'+uid);if(saved){const b=JSON.parse(saved);if(Array.isArray(b)&&b.length===2)hotbar=b;}}catch(e){}
+  myPos=safeSpawn(280,600,80);
+  document.getElementById('screen-login').style.display='none';
+  document.getElementById('screen-game').style.display='flex';
+  resize();spawnMonsters();renderSt();loop();
+  setInterval(pollPlayers,2000);setInterval(pollChat,1500);setInterval(saveProfile,8000);pollChat();
+  addLine({cls:'sy',text:`⚔️ 마을 입장! Lv.${me.level} | 💰${me.gold}G | 📦${me.inventory.length}개`});
+  addLine({cls:'sy',text:`🏘️ 마을(상점/대장간) → 숲(재료) → 던전(오른쪽 끝)`});
+}
 async function pollPlayers(){await db.from('presence').upsert({id:me.id,username:me.username,cls:me.cls,x:Math.round(myPos.x),y:Math.round(myPos.y),ts:Date.now()},{onConflict:'id'});const{data}=await db.from('presence').select('*').gt('ts',Date.now()-12000);if(!data)return;const on={};data.forEach(p=>{if(p.id!==me.id)on[p.id]=p;});for(const id of Object.keys(players)){if(!on[id]){remChar(id);delete players[id];}}for(const[id,p]of Object.entries(on))players[id]={...(players[id]||{}),...p};}
 function addLine(m){const log=document.getElementById('cl');const d=document.createElement('div');d.className='cl '+(m.cls||'sy');if(m.cn)d.innerHTML=`<span class="cn3" style="color:${ncol(m.cn)}">${m.cn}</span> ${m.text}`;else d.textContent=m.text;log.appendChild(d);log.scrollTop=log.scrollHeight;}
 async function sendChat(){const inp=document.getElementById('ci');const t=inp.value.trim();if(!t)return;inp.value='';showBubble(me.id,t);await db.from('chats').insert({scope:'dungeon',username:me.username,text:t,is_sys:false}).catch(()=>{});}
