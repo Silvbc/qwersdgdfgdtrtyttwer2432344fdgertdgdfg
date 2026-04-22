@@ -476,10 +476,10 @@ function draw(){
   ctx.fillRect(fsX-10,fsY+8,20,14);
   ctx.fillStyle='#606060';ctx.fillRect(fsX-14,fsY-4,28,5);
   // 불꽃 (모루 위)
-  const ff=0.6+Math.sin(torchT*5)*0.4;
-  ctx.fillStyle=`rgba(255,${80+Math.floor(ff*60)},10,${ff*0.8})`;
+  const bff=0.6+Math.sin(torchT*5)*0.4;
+  ctx.fillStyle=`rgba(255,${80+Math.floor(bff*60)},10,${bff*0.8})`;
   ctx.beginPath();ctx.ellipse(fsX-8,fsY-6,4,7,0,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle=`rgba(255,200,60,${ff*0.7})`;
+  ctx.fillStyle=`rgba(255,200,60,${bff*0.7})`;
   ctx.beginPath();ctx.ellipse(fsX-8,fsY-9,2,4,0,0,Math.PI*2);ctx.fill();
   // 망치 (애니메이션)
   ctx.save();ctx.translate(fsX+12,fsY-24);ctx.rotate(Math.sin(torchT*4)*0.35-0.3);
